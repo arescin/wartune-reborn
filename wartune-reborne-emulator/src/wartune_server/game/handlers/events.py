@@ -92,16 +92,6 @@ async def login_push(s: GameSession) -> None:
         # VipPrerogativeType.AUTO_SIGN_IN (3): "Auto Daily Check-In on Login" do VIP 2 em diante; o cliente não
         # manda nada (nenhum uso do tipo no decompilado), então o servidor assina. (dedução) o 4177 logo aqui
         await _sign(s, auto=True)
-    elif s.is_h5:
-        # No cliente H5, PlayerMsg (0x0003) não lê signDate; enviar 4177 evita signDate undefined em Home.canSign
-        now = s.ctx.clock.now()
-        st = _sign_state(s.snapshot, now)
-        s.send(
-            S_SIGN,
-            b.complete(
-                pb.PlayerSignRspMsg(signDate=b.fmt_time(now), signTimes=st.value.bit_count(), signSite=st.value)
-            ),
-        )
     offer.login_push(s)
     from . import dungeon  # dungeon importa player, que importa login, que importa este módulo
 

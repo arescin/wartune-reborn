@@ -4,14 +4,22 @@ from __future__ import annotations
 
 import struct
 
-from .cipher import DEFAULT_KEY, StreamCipher
+from .cipher import StreamCipher
 from .packet import HEADER_SIZE, MAGIC, Packet, PacketError
 
 POLICY_REQUEST = b"<policy-file-request/>\x00"
 
 
 class PacketDecoder:
-    """Recebe bytes cifrados e devolve pacotes completos e decifrados, **um por vez**."""
+    """Recebe bytes cifrados e devolve pacotes completos e decifrados, **um por vez**.
+
+    Um por vez porque a chave pode mudar entre dois pacotes que chegaram juntos
+    (o cliente troca a chave logo depois de enviar o 20001): quem consome decide,
+    a cada pacote, se troca a chave antes de pedir o próximo.
+
+    O cabeçalho é lido com ``peek`` (sem avançar a chave); a chave só avança
+    quando o pacote inteiro chega. Não é thread-safe: um decoder por conexão.
+    """
 
     def __init__(self, cipher: StreamCipher) -> None:
         self._cipher = cipher
@@ -31,16 +39,7 @@ class PacketDecoder:
     def next_packet(self) -> Packet | None:
         if len(self._buffer) < HEADER_SIZE:
             return None
-
         magic, length = struct.unpack(">hH", self._cipher.peek(bytes(self._buffer[:4])))
-        if magic != MAGIC:
-            # Testa com chave resetada para DEFAULT_KEY (resetKey do cliente H5 antes de cada pré-login)
-            test_peek = self._cipher._decrypt(bytes(self._buffer[:4]), bytearray(DEFAULT_KEY))
-            m_def, l_def = struct.unpack(">hH", test_peek)
-            if m_def == MAGIC:
-                self._cipher.reset(DEFAULT_KEY)
-                magic, length = m_def, l_def
-
         if magic != MAGIC:
             raise PacketError(f"magic inválido no fluxo: {magic}")
         if length < HEADER_SIZE:

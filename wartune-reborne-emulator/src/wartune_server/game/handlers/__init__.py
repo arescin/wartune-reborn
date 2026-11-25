@@ -29,7 +29,6 @@ from . import (  # noqa: F401  (registra os handlers no router)
     historia,
     items,
     login,
-    login_h5,
     lords,
     lottery,
     mail,

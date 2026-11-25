@@ -44,10 +44,6 @@ class Settings(BaseSettings):
 
     # Segredo compartilhado com o painel GM do portal (POST /gm/kick). Sem ele a rota não existe.
     gm_secret: str | None = None
-    # Autenticação do Painel Admin separado (/api/admin/*). Sem senha nem gm_secret, /api/admin retorna 503.
-    admin_username: str = "admin"
-    admin_password: str | None = None
-    admin_token_secret: str | None = None
 
     socket_session_ttl_seconds: int = 1800  # sem uso por esse tempo, o login HTTP precisa ser refeito
     idle_timeout_seconds: int = 300

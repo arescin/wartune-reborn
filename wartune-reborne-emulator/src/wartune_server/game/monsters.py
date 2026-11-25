@@ -242,8 +242,7 @@ def battle(snap: PlayerSnapshot, world: World, templates: GameTemplates, m: Mons
     heroes: list[dict[str, object]] = []
     if unit.pawn_id:
         row = templates.get("PawnTempInfos", unit.pawn_id) or {}
-        raw_live = int(row.get("Live") or 100)
-        hp = max(1, raw_live if raw_live < 1000 else raw_live // 100)
+        hp = max(1, int(row.get("Live") or 100) // 100)
         for i, pos in enumerate(STACK_POS[stacks(templates, m)]):
             soldiers.append({"livingId": i + 1, "side": 2, "pos": pos, "tempId": unit.pawn_id, "type": 1,
                              "initHp": hp, "hp": hp, "qteTime": 0, "castTime": 6000})  # fmt: skip

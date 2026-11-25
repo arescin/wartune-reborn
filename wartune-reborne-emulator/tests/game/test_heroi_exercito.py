@@ -43,10 +43,7 @@ async def test_recruit_put_in_army_and_dismiss(tmp_path: Path) -> None:
         pawn = pb.ArmyPawnUpdatedMsg.FromString(got[2].body).armyPawn[0]
         assert (pawn.armyId, pawn.sonType, pawn.ownPawns, pawn.fightPos, len(pawn.pawnLive)) == (0, 101, 900, 3, 7)
         assert [x.tempData for x in pawn.pawnLive] == [64, 50, 0, 40, 323, 64, 0]  # igual à inglesa #658
-        assert pb.ChatChannelMsg.FromString(got[3].body).encodeMsg in (
-            "Successfully Recruited 900 Lancer",
-            "Successfully Recruited 900 Lanceiro",
-        )
+        assert pb.ChatChannelMsg.FromString(got[3].body).encodeMsg == "Successfully Recruited 900 Lancer"
 
         g.client.send(5155, pb.ArmyPawnInfoMsg(tempateId=10101, ownPawns=1))  # casa cheia
         assert await g.idle() == []
@@ -105,10 +102,7 @@ async def test_pawn_upgrade_costs_soul_and_needs_barracks(tmp_path: Path) -> Non
         assert codes(got) == [3, 116, 150, 83]  # tutorial_en #2089-#2094
         assert pb.PlayerMsg.FromString(got[0].body).strategy == 84  # 16 de Daru (UpGrade Types 1)
         assert pb.ArmyPawnInfoMsg.FromString(got[1].body).tempateId == 10102
-        assert pb.ChatChannelMsg.FromString(got[3].body).encodeMsg in (
-            "Lancer successfully upgraded to Lvl. 2",
-            "Lanceiro successfully upgraded to Lvl. 2",
-        )
+        assert pb.ChatChannelMsg.FromString(got[3].body).encodeMsg == "Lancer successfully upgraded to Lvl. 2"
         await g.idle()
 
         # (visto) oficial_20261023-231733-1 #2110-#2116: herói ferido, a reserva cura e o 83 do HP pack vem por último
@@ -608,10 +602,6 @@ async def test_rare_astral_is_shouted_to_the_whole_server(tmp_path: Path, monkey
         text = pb.ChatChannelMsg.FromString(got[-1].body)
         heard = pb.ChatChannelMsg.FromString([p for p in await other.until(83) if p.code == 83][-1].body)
         assert text == heard and text.channel == 2
-        assert any(
-            text.encodeMsg.endswith(suffix)
-            for suffix in (
-                ' just received the extremely rare [<a t="3" id="1405" name="Enhanced Guardian Angel" grades="1"/>] Astral!',
-                ' just received the extremely rare [<a t="3" id="1405" name="Espírito Nulo" grades="1"/>] Astral!',
-            )
+        assert text.encodeMsg.endswith(
+            ' just received the extremely rare [<a t="3" id="1405" name="Enhanced Guardian Angel" grades="1"/>] Astral!'
         )

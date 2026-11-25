@@ -110,10 +110,7 @@ async def test_ocupa_e_desiste_da_mina_do_mundo(tmp_path: Path, monkeypatch: pyt
         g.client.send(5035, pb.LoginStateMsg(state=3))
         assert [p.code for p in await g.idle()] == [4382]
         politics = pb.CastleYieldMsg.FromString(next(p.body for p in got if p.code == 152))
-        assert [(y.wildPoxName, y.mapId) for y in politics.wildYield] in (
-            [("Autaric Plains(2487,2632)", 1)],
-            [("Pasto Livre(2487,2632)", 1)],
-        )
+        assert [(y.wildPoxName, y.mapId) for y in politics.wildYield] == [("Autaric Plains(2487,2632)", 1)]
         assert [(w.id, w.occupyPlayerId) for w in _synced(got)][-1] == (FIRST[0], g.user_id)
         land = next(w for w in snap.wild_lands if w.wild_id == FIRST[0])
         assert land.map_id == 1 and land.cycle_at is not None

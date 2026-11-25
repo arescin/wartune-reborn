@@ -74,25 +74,16 @@ class Connection:
         self._writer: asyncio.Task[None] | None = None
         self._log = log.bind(conn=conn_id, peer=transport.peer)
         self.client_id = 0  # vai no cabeçalho dos pacotes enviados (id do jogador)
-        self._rekeyed = False
 
     @property
     def closing(self) -> bool:
         return self._closing
-
-    @property
-    def is_h5(self) -> bool:
-        return type(self.transport).__name__ == "WebSocketTransport"
 
     # -- API usada pela camada de jogo -------------------------------------------------
     def send(self, packet: Packet) -> None:
         if self._closing:
             return
         try:
-            # Apenas pacotes de pré-login H5 usam DEFAULT_KEY; após rekey(20001) a chave da sessão deve permanecer fixa
-            if not self._rekeyed and packet.code in (3846, 3843, 3844, 3845, 4234, 28680):
-                from ..protocol.cipher import DEFAULT_KEY
-                self._queue.put_nowait(_Rekey(DEFAULT_KEY))
             self._queue.put_nowait(packet)
         except asyncio.QueueFull:
             self._log.warning("fila de envio cheia; desconectando cliente lento")
@@ -104,7 +95,6 @@ class Connection:
 
     def rekey(self, key: bytes) -> None:
         """Troca a chave das duas direções a partir de agora (após o 20001)."""
-        self._rekeyed = True
         self._decoder.cipher.reset(key)  # recebimento: estamos dentro do leitor, entre pacotes
         self._queue.put_nowait(_Rekey(key))  # envio: em ordem com o que já está na fila
 

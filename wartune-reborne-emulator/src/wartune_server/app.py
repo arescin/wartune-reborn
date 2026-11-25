@@ -129,27 +129,12 @@ class GameServerApp:
             services.guilds,
             EventCatalog.load(settings.events_file),
             world=services.world,
-            settings=settings,
-            database=services.database,
         )
         server_state.restore(ctx, services.states)
-        self.ctx = ctx
         self.acceptor = ConnectionAcceptor(
             registry, lambda conn: GameSession(conn, ctx), idle_timeout=settings.idle_timeout_seconds
         )
-        self.http_app = build_http_app(
-            HttpDeps(
-                settings=settings,
-                login=services.login,
-                characters=services.characters,
-                online=self.online,
-                uow=lambda: SqlAlchemyUnitOfWork(services.database.sessions),
-                keys=services.keys,
-                clock=services.clock,
-                acceptor=self.acceptor,
-                ctx=ctx,
-            )
-        )
+        self.http_app = build_http_app(HttpDeps(settings, services.login, services.characters, self.online))
 
     async def serve(self, stop: asyncio.Event) -> None:
         s = self.settings

@@ -65,8 +65,7 @@ def _sites(s: GameSession) -> list[int]:
     """DropViewInfos: as 10 casas da roleta (o cliente indexa os templates pelo Site), na ordem do último 4144: o
     ``blessSite`` do 5145 é a posição nessa lista."""
     if not s.altar_sites:
-        rows = s.ctx.templates.rows("DropViewInfos")
-        s.altar_sites = [int(r["Site"]) for r in rows][:10] if rows else list(range(1, 11))
+        s.altar_sites = [int(r["Site"]) for r in s.ctx.templates.rows("DropViewInfos")][:10]
     return s.altar_sites
 
 

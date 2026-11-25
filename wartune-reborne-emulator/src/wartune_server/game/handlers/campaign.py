@@ -323,26 +323,23 @@ async def campaign_training(s: GameSession, msg: pb.NoviceReqMsgMsg) -> None:
 
 @router.on(5124)
 async def sync_pos(s: GameSession, msg: pb.PosMoveMsg) -> None:
-    if s.campaign is None or not msg.routes:
-        s.log.info("5124 descartado", em_campanha=s.campaign is not None, rotas=len(msg.routes), mapa=msg.mapId)
-        return
-    last = msg.routes[-1]
-    s.campaign.pos = (last.x // TILE, last.y // TILE)
-    s.log.debug("5124 posição", mapa=s.campaign.map_id, rotas=len(msg.routes), tile=s.campaign.pos)
-    if s.campaign.is_warfield:
-        from .warfield import broadcast_move  # warfield importa este módulo
+    if s.campaign is not None and msg.routes:
+        last = msg.routes[-1]
+        s.campaign.pos = (last.x // TILE, last.y // TILE)
+        if s.campaign.is_warfield:
+            from .warfield import broadcast_move  # warfield importa este módulo
 
-        broadcast_move(s, msg)
-    if s.campaign.gvg:
-        from .guildwar import moved  # guildwar importa este módulo
+            broadcast_move(s, msg)
+        if s.campaign.gvg:
+            from .guildwar import moved  # guildwar importa este módulo
 
-        moved(s, msg)
-    if s.campaign.wedding:
-        from .wedding import moved as wedding_moved  # wedding importa este módulo
+            moved(s, msg)
+        if s.campaign.wedding:
+            from .wedding import moved as wedding_moved  # wedding importa este módulo
 
-        wedding_moved(s, msg)
-    for mate in mates(s):  # (visto) 232017 #7875: 4185 com o caminho do outro da sala (armyId 10)
-        mate.send(S_MOVE, pb.PosMoveMsg(mapId=s.campaign.map_id, armyId=s.player_id, routes=msg.routes))
+            wedding_moved(s, msg)
+        for mate in mates(s):  # (visto) 232017 #7875: 4185 com o caminho do outro da sala (armyId 10)
+            mate.send(S_MOVE, pb.PosMoveMsg(mapId=s.campaign.map_id, armyId=s.player_id, routes=msg.routes))
 
 
 @router.on(8196)
@@ -2126,28 +2123,12 @@ async def novice(s: GameSession, msg: pb.NoviceReqMsgMsg) -> None:
     snap = s.snapshot
     assert snap is not None
     c = snap.character
-    extra: list[Any] = []
-    if s.is_h5 and msg.noviceProcess == 0 and s.packet is not None:
-        from .. import events as ev
-        from .login_h5 import decode_protobuf
-
-        h5_node = decode_protobuf(s.packet.body).get(8, [0])[0]
-        if isinstance(h5_node, int) and h5_node > 0:
-            now = s.ctx.clock.now()
-            st = ev.state(snap, "h5_novice", now)
-            nodes = [part for part in st.text.split("_") if part]
-            token = str(h5_node)
-            if token not in nodes:
-                nodes.append(token)
-            st.text, st.updated_at = "_" + "_".join(nodes), now
-            extra.append(st)
-    if msg.noviceProcess > 0:
-        if rules.novice_step_ok(c.novice_process, msg.noviceProcess):
-            c.novice_process = msg.noviceProcess
-        else:
-            s.log.info("5017 recusado", novice=msg.noviceProcess, atual=c.novice_process)
+    if rules.novice_step_ok(c.novice_process, msg.noviceProcess):
+        c.novice_process = msg.noviceProcess
+    else:
+        s.log.info("5017 recusado", novice=msg.noviceProcess, atual=c.novice_process)
     changed = rules.update_novice_quests(snap, s.ctx.templates)
-    await s.ctx.characters.save(c, *extra, *changed)
+    await s.ctx.characters.save(c, *changed)
     if pushed := [q for q in changed if rules.novice_pushes(s.ctx.templates, q)]:
         _send(s, S_QUESTS, quest_update(pushed, rules.quest_bitmap(snap)))
     await _push_player(s)

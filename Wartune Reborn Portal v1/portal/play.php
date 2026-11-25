@@ -26,7 +26,10 @@ $ruffle = [
     'socket' => [
         'host' => $server['public_host'],
         'port' => (int) $server['socket_port'],
-        'proxy' => (int) $server['websocket_port'] ? sprintf('ws://%s:%d', $server['public_host'], $server['websocket_port']) : null,
+        // WARTUNE_WS_URL permite sobrescrever o proxy WebSocket via env (ex: wss://wartune-server.thnsdu.easypanel.host/ws)
+        'proxy' => (int) $server['websocket_port']
+            ? (getenv('WARTUNE_WS_URL') ?: sprintf('wss://%s:%d', $server['public_host'], $server['websocket_port']))
+            : null,
     ],
 ];
 ?>

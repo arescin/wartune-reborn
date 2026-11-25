@@ -143,7 +143,7 @@ async def test_dois_jogadores_batem_no_mesmo_chefe_e_um_so_da_o_ultimo_golpe(tmp
             await game.idle()
         ctx = sessions[0].ctx  # type: ignore[union-attr]
         pool = ctx.bosses.pools[5001]
-        pool.fight.total_hp = 100  # morre em poucos golpes
+        pool.fight.total_hp = 150  # morre em poucos golpes
 
         async def fight(game: object) -> list[object]:
             game.client.send(5125, pb.CampaignReqMsg(paraInt1=500102))  # type: ignore[attr-defined]
@@ -154,12 +154,10 @@ async def test_dois_jogadores_batem_no_mesmo_chefe_e_um_so_da_o_ultimo_golpe(tmp
 
         reports = await asyncio.gather(fight(g), fight(b))
         assert pool.hp == 0 and pool.fight.killer_id in (g.user_id, b.user_id)
-        assert sum(w.wound for w in pool.wounds.values()) == 100
-        results = []
+        assert sum(w.wound for w in pool.wounds.values()) == 150
         for got in reports:
             [report] = [pb.BattleReportMsg.FromString(p.body) for p in got if p.code == 4103]  # type: ignore[attr-defined]
-            results.append(report.battleResult)
-        assert 1 in results  # quem dá o último golpe tem vitória (1), o outro tem (2)
+            assert report.battleResult == 1
 
         async def stored(uow: object) -> tuple[object, list[object]]:
             fight = await uow.world_boss.fight(5001, pool.fight.opened_at)  # type: ignore[attr-defined]
@@ -167,8 +165,8 @@ async def test_dois_jogadores_batem_no_mesmo_chefe_e_um_so_da_o_ultimo_golpe(tmp
 
         fight_row, wounds = await ctx.characters.read(stored)
         assert fight_row.killer_id == pool.fight.killer_id  # type: ignore[attr-defined]
-        assert sum(w.wound for w in wounds) == 100  # type: ignore[attr-defined]
-        assert fight_row.settled and fight_row.next_hp == 150  # type: ignore[attr-defined]  # morreu: +50%
+        assert sum(w.wound for w in wounds) == 150  # type: ignore[attr-defined]
+        assert fight_row.settled and fight_row.next_hp == 225  # type: ignore[attr-defined]  # morreu: +50%
 
         for game, got in zip((g, b), reports, strict=True):
             got = [*got, *await game.idle()]  # type: ignore[attr-defined]
@@ -248,12 +246,12 @@ async def test_morre_no_sexto_golpe_e_revive_pagando(tmp_path: Path) -> None:
         g.client.send(8264, pb.PayTypeMsg(payType=1))
         got = await g.idle()
         [alive] = [pb.PlayerStateListMsg.FromString(p.body) for p in got if p.code == 4175]
-        assert alive.playerState[0].state == 0 and ch.point == 17
+        assert alive.playerState[0].state == 0 and ch.point == 5
         assert 112 in [p.code for p in got] and instant.progress == 1  # o reviver pago conta o tipo 66
         codes = [p.code for p in got]
         assert codes.index(4434) < codes.index(4175) < codes.index(157)  # #8629-#8638: a luta começa na hora
         g.client.send(8264, pb.PayTypeMsg(payType=1))  # vivo: aviso, nada cobrado
-        assert [p.code for p in await g.idle()] == [ALERT] and ch.point == 17 and instant.progress == 1
+        assert [p.code for p in await g.idle()] == [ALERT] and ch.point == 5 and instant.progress == 1
 
 
 async def test_campanha_que_nao_e_chefe_nem_pedreira_diz_indisponivel(tmp_path: Path) -> None:
@@ -272,7 +270,7 @@ async def test_corpo_vazio_nao_derruba_a_sessao(tmp_path: Path) -> None:
         for code in (8258, 8259, 8264, 8470):
             c.send(code)  # corpo vazio: 8258 recusa (id 0), 8259 não tem resposta
         c.send(8271)
-        assert [p.code for p in await g.idle()] == [ALERT, ALERT, ALERT, 4182, 4451, 4637, 462, 4741, 4683]
+        assert [p.code for p in await g.idle()] == [ALERT, ALERT, ALERT, 4182, 4451, 4637, 462, 4741, 4683, 4685]
 
 
 async def test_relogio_manda_4182_quando_o_chefe_abre(tmp_path: Path) -> None:

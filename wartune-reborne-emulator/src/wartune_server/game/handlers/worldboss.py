@@ -122,7 +122,7 @@ async def boss_state(s: GameSession, _: object) -> None:
     s.send(S_UNKNOWN_462, pb.SimplePropertyMsg(param7=False))
     s.send(S_CROSS_ICON, pb.SimplePropertyMsg(param1=0))
     s.send(S_CROSS_STATE, pb.GuildMsg(param5=False))
-    # s.send(S_CROSS_FIRST) omitido no login para evitar NPE no ApexManager antes de TopToolsBar existir
+    s.send(S_CROSS_FIRST)
     # o 4423 do login (WorldBossManager.setup escuta junto do 4182): nenhuma captura o tem, então (dedução) só com
     # dublê comprado; pagando, ele já sai no ``pay_standins``
     if not await pay_standins(s) and _standins(s):

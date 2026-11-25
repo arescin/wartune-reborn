@@ -258,14 +258,14 @@ async def test_upgrade_cooldown_quick_and_learning(tmp_path: Path) -> None:
         guild.offer = 10_000
         a.client.send(5133, pb.ConsortiaMsg(upgradeType=1))
         info = _one(await a.idle(), 164, pb.ConsortiaInfoMsg)
-        assert (info.levels, info.offer, info.codeType) == (2, 9_600, 1) and info.codeNeedDate in (1800, 3600)
+        assert (info.levels, info.offer, info.codeType, info.codeNeedDate) == (2, 9_600, 1, 3600)
 
         a.client.send(5133, pb.ConsortiaMsg(upgradeType=4))  # escola: espera da guilda
         assert not [p for p in await a.idle() if p.code == 164]
 
-        a.client.send(8545, pb.PayTypeMsg(payType=1))  # 1800 s = 3 diamantes (ou 3600 s = 6)
+        a.client.send(8545, pb.PayTypeMsg(payType=1))  # 3600 s = 6 diamantes
         await a.idle()
-        assert _char(a).point in (94, 97) and guild.code_begin_at is None
+        assert _char(a).point == 94 and guild.code_begin_at is None
 
         c = _char(a)
         c.consortia_offer = 1000
@@ -435,7 +435,7 @@ async def test_altar_currency_and_rare_prizes(tmp_path: Path, monkeypatch: pytes
         a.client.send(8216)
         got = await a.idle()
         assert [p.code for p in got] == [109, 111, 4143, 83]
-        assert _one(got, 111, pb.ChatChannelMsg).encodeMsg in ("Received: 5,000 Gold", "Received: 5,000 Ouro")
+        assert _one(got, 111, pb.ChatChannelMsg).encodeMsg == "Received: 5,000 Gold"
 
         _prize(monkeypatch, 8, 1)
         a.client.send(5145, pb.SimplePropertyMsg(param1=1))

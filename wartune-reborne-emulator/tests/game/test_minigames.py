@@ -288,7 +288,7 @@ async def test_normal_fund_buys_in_the_buy_window_and_harvests_one_tier_per_day(
         c.grades, c.point = 11, 1500
         g.client.send(8703, pb.DepositActiveMsg())
         fund = pb.DepositActiveMsg.FromString(_body(await g.idle(), 4612))
-        assert fund.activeType == 1 and fund.setEndDate in (1729295999000, 1792367999000, "2026-10-18 23:59:59") and len(fund.activeParams) == 3
+        assert (fund.activeType, fund.setEndDate, len(fund.activeParams)) == (1, "2026-10-18 23:59:59", 3)
         assert [(i.templateId, i.count) for i in fund.activeParams[0].itemInfos][0] == (2126025, 25)  # #86
 
         g.client.send(8703, pb.DepositActiveMsg(opType=1, opParam=1))  # 1000 diamantes

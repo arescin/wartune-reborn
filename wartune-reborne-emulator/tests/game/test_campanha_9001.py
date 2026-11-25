@@ -34,19 +34,16 @@ async def test_start_da_sala_entra_e_gasta_a_entrada(tmp_path: Path) -> None:
         ready = pb.PlayerReadyRspMsg.FromString(got[0].body).readyState[0]
         assert (ready.playerId, ready.readyState) == (g.user_id, 2)
         created = pb.RoomCreatedMsg.FromString(got[1].body).room
-        assert (created.roomId, created.campaignId, created.roomState) == (
+        assert (created.roomId, created.campaignId, created.name, created.roomState) == (
             room.roomId,
             2011,
+            "Claristun",
             3,
         )
-        assert created.name in ("Claristun", "Ilha de Theron")
         me = pb.RoomEnterMsg.FromString(got[3].body).player[0]
         assert (me.roomId, me.count, me.playerState) == (room.roomId, 1, 2)
         text = pb.ChatChannelMsg.FromString(got[-1].body).encodeMsg
-        assert text in (
-            "Entered [Claristun]. You still have 0/1 multi-player dungeon attempts available.",
-            "Entered [Ilha de Theron]. You still have 0/1 multi-player dungeon attempts available.",
-        )
+        assert text == "Entered [Claristun]. You still have 0/1 multi-player dungeon attempts available."
         c = session.snapshot.character
         assert (c.weary, c.multi_copy_count) == (weary, 0)
         assert session.campaign is not None and session.campaign.run is not None and session.campaign.run.rewarded
@@ -83,5 +80,5 @@ async def test_bau_vip_gasta_kyanite(tmp_path: Path) -> None:
         assert confirm.body == "Are you sure you want to spend 2000 Kyanite to open this VIP Treasure Chest?"
         g.client.send(5033, pb.CampaignReqMsg(paraInt1=confirm.mapId, paraInt2=201110, paraBool1=True))
         got = await g.until(83)
-        assert pb.ChatChannelMsg.FromString(got[-1].body).encodeMsg in ("Received: Skeleton Key x2", "Received: Chave-Caveira x2")
+        assert pb.ChatChannelMsg.FromString(got[-1].body).encodeMsg == "Received: Skeleton Key x2"
         assert session.snapshot.character.crystals == 3000

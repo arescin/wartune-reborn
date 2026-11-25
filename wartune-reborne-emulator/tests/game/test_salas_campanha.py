@@ -163,7 +163,7 @@ async def test_dono_escolhe_a_campanha_e_todos_recebem_o_32(tmp_path: Path):
             assert [p.code for p in got] == [EDIT, 24]  # (visto) 191924 #3746-#3747
             edit = pb.EditRoomRspMsg.FromString(got[0].body)
             assert (edit.roomId, edit.startCampaignId, edit.masterId, edit.count) == (room_id, 9001, a.user_id, 2)
-            assert edit.roomName in ("Claristun", "Ilha de Theron")  # o CampaignName (oficial: "Nether Forest" na 9000, PT-BR "Ilha de Theron")
+            assert edit.roomName == "Claristun"  # o CampaignName (oficial: "Nether Forest" na 9000)
 
 
 async def test_pronto_senha_estado_e_convite_da_sala(tmp_path: Path):

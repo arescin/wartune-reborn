@@ -79,32 +79,3 @@ async def test_policy_request_on_game_port() -> None:
     handler = EchoRekey(conn, transport)
     await asyncio.wait_for(conn.run(handler), 5)
     assert bytes(transport.sent) == POLICY_XML and not handler.got
-
-
-async def test_4234_after_rekey_preserves_session_cipher() -> None:
-    client = StreamCipher()
-    wire = client.encrypt(Packet(20001, b"login").encode())
-    client.reset(NEW_KEY)
-    wire += client.encrypt(Packet(20008, b"ping").encode())
-
-    transport = FakeTransport([wire])
-    conn = Connection(transport, MessageRegistry.load_default(), conn_id=3)
-
-    class H5RekeyHandler:
-        async def on_packet(self, packet: Packet) -> None:
-            if packet.code == 20001:
-                conn.send(Packet(3841, b"ok"))
-                conn.rekey(NEW_KEY)
-            elif packet.code == 20008:
-                conn.send(Packet(4234, b"time"))
-                transport.finish()
-
-        async def on_disconnect(self) -> None:
-            pass
-
-    await asyncio.wait_for(conn.run(H5RekeyHandler()), 5)
-    decoder = PacketDecoder(StreamCipher())
-    decoder.feed(bytes(transport.sent))
-    assert decoder.next_packet() == Packet(3841, b"ok")
-    decoder.cipher.reset(NEW_KEY)
-    assert decoder.next_packet() == Packet(4234, b"time")

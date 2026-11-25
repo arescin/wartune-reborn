@@ -216,7 +216,6 @@ PENDENTES = {
     6: "Forgotten Catacombs (tipo 38): gancho em tower.py:172 existe; janela com 4484/4426/4476 de recompensa não reproduzida",
     224: "guilda (tipo 22/29, oferta de guilda): o teste não monta guilda com contribuição",
     370: "item de bolsa (tipo 28) com 4476/4426/4484 de outras áreas na janela",
-    380: "janela com 4484 de leed/eventos de outras áreas",
     390: "mapa (tipo 37): o personagem precisa estar no mapa da condição, não montado",
     530: "campanha (tipo 14, boss 9002): janela com 4484 de outras áreas",
     621: "prédio (tipo 2): janela com 4594 de outras áreas",
