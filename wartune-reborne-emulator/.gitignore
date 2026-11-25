@@ -20,9 +20,11 @@ logs/
 data/*
 !data/*.json
 !data/templates/
-!data/templates/*
+!data/templates/tempinfos.xml
+!data/cdn/
 captures/
 .claude/
+.playwright-mcp/
 
 # Material de consulta (relatórios de revisão, legado turco)
 consulta/

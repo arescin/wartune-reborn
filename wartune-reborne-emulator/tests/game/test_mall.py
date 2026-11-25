@@ -188,7 +188,8 @@ async def test_market_list_and_search_show_open_listings(tmp_path: Path) -> None
         ]
         assert (market.pageIdx, market.pageCount) == (1, 1)
 
-        b.client.send(8457, pb.SearchItemReqMsg(itemName="bullhorn", page=1))
+        horn_name = g.server.services.templates.get("ItemTempInfos", HORN)["TemplateName"]
+        b.client.send(8457, pb.SearchItemReqMsg(itemName=horn_name[:4].lower(), page=1))
         assert [x.id for x in last(await b.until(4359), pb.AuctionItemsMsg).sellItem] == [listing.id]
         b.client.send(8457, pb.SearchItemReqMsg(minLevel=50, page=1))
         assert list(last(await b.until(4359), pb.AuctionItemsMsg).sellItem) == []
@@ -493,14 +494,15 @@ async def test_search_pages_by_seven_in_the_clicked_order(tmp_path: Path) -> Non
         b = await g.join("bruxa")
 
         # AuctionBuyResultPane: 7 linhas; orderBy 3 = preço atual, orderType 2 = decrescente
-        b.client.send(8457, pb.SearchItemReqMsg(itemName="bullhorn", page=1, orderBy=3, orderType=2))
+        horn_name = g.server.services.templates.get("ItemTempInfos", HORN)["TemplateName"]
+        b.client.send(8457, pb.SearchItemReqMsg(itemName=horn_name[:4].lower(), page=1, orderBy=3, orderType=2))
         first = last(await b.until(4359), pb.AuctionItemsMsg)
         assert [x.point for x in first.sellItem] == [17, 16, 15, 14, 13, 12, 11]
         assert (first.pageIdx, first.pageCount) == (1, 2)
-        b.client.send(8457, pb.SearchItemReqMsg(itemName="bullhorn", page=2, orderBy=3, orderType=2))
+        b.client.send(8457, pb.SearchItemReqMsg(itemName=horn_name[:4].lower(), page=2, orderBy=3, orderType=2))
         assert [x.point for x in last(await b.until(4359), pb.AuctionItemsMsg).sellItem] == [10]
 
-        b.client.send(8457, pb.SearchItemReqMsg(itemName="bullhorn", page=1, orderBy=4, orderType=1))
+        b.client.send(8457, pb.SearchItemReqMsg(itemName=horn_name[:4].lower(), page=1, orderBy=4, orderType=1))
         assert [x.fixPoint for x in last(await b.until(4359), pb.AuctionItemsMsg).sellItem] == [
             93,
             94,

@@ -165,13 +165,15 @@ def _fund_msg(s: GameSession, snap: PlayerSnapshot, fund: Fund = NOVICE) -> pb.D
     if not fund.novice:
         msg.title, msg.description = str(cfg.get("title", "")), str(cfg.get("description", ""))
         for name in ("setStartDate", "setEndDate", "getStartDate", "getEndDate"):
-            setattr(msg, name, str(cfg[name]))
+            if name in cfg and cfg[name]:
+                setattr(msg, name, int(_at(cfg, name).timestamp() * 1000))
         if level and st is not None:
-            msg.depositTime = st.text
+            msg.depositTime = int(st.updated_at.timestamp() * 1000)
     elif level and st is not None:
-        msg.depositTime = st.text
-        msg.getStartDate = st.text
-        msg.getEndDate = str(cfg["endDate"])  # ponytail: janela de resgate desconhecida (2099 = sem fim)
+        msg.depositTime = int(st.updated_at.timestamp() * 1000)
+        msg.getStartDate = int(st.updated_at.timestamp() * 1000)
+        if "endDate" in cfg and cfg["endDate"]:
+            msg.getEndDate = int(_at(cfg, "endDate").timestamp() * 1000)
     for lv in cfg["levels"]:
         p = msg.activeParams.add(
             level=int(lv["level"]), costDiamond=int(lv["costDiamond"]), harvestCount=len(lv["tiers"])

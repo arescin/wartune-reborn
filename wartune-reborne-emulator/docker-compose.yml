@@ -1,0 +1,30 @@
+services:
+  wartune-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wartune-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # HTTP API
+      - "5000:5000"   # Socket TCP do jogo
+      - "5001:5001"   # WebSocket (Ruffle / Web)
+      - "843:843"     # Flash Policy
+    volumes:
+      - wartune-data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - WARTUNE_SERVER_ID=1
+      - WARTUNE_SERVER_NAME=S1 - EasyPanel
+      - WARTUNE_SITE=local_0001
+      - WARTUNE_BIND_HOST=0.0.0.0
+      - WARTUNE_PUBLIC_HOST=127.0.0.1
+      - WARTUNE_HTTP_PORT=8080
+      - WARTUNE_SOCKET_PORT=5000
+      - WARTUNE_WEBSOCKET_PORT=5001
+      - WARTUNE_DATABASE_URL=sqlite+aiosqlite:////app/data/wartune.db
+      - WARTUNE_GAME_TIMEZONE=UTC
+      - WARTUNE_LOG_LEVEL=INFO
+
+volumes:
+  wartune-data:

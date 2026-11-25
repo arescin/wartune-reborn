@@ -92,11 +92,14 @@ def centre(templates: GameTemplates, map_id: int) -> tuple[int, int]:
 LANDING = {2: (2084, 1953), 3: (1229, 1103)}
 
 
-def landing(templates: GameTemplates, settings: Mapping[str, Any], map_id: int) -> tuple[int, int]:
+def landing(templates: GameTemplates, settings: Mapping[str, Any] | None, map_id: int) -> tuple[int, int]:
     """Âncora do castelo que chega num mapa: o ponto visto no inglês; sem captura, o centro."""
-    seen = {**LANDING, **{int(k): tuple(v) for k, v in (settings.get("castle_landing") or {}).items()}}
-    x, y = seen.get(map_id) or centre(templates, map_id)
-    return int(x), int(y)
+    settings_landing = (settings.get("castle_landing") if settings else {}) or {}
+    seen = {**LANDING, **{int(k): tuple(v) for k, v in settings_landing.items()}}
+    pt = seen.get(map_id)
+    if pt is not None and inside(templates, map_id, pt[0], pt[1]):
+        return int(pt[0]), int(pt[1])
+    return centre(templates, map_id)
 
 
 def nearest_free(
@@ -105,8 +108,14 @@ def nearest_free(
     """O tile livre mais próximo de ``start`` dentro do mapa, em anéis quadrados (Chebyshev; no mesmo anel, o de
     menor distância real). TODO(inventado): o oficial escolhe um ponto livre sem regra conhecida."""
     size = map_size(templates, map_id) or (0, 0)
+    if not inside(templates, map_id, start[0], start[1]):
+        start = centre(templates, map_id)
     sx, sy = start
     for r in range(max(size) + 1):
+        if r == 0:
+            if inside(templates, map_id, sx, sy) and not taken(sx, sy):
+                return sx, sy
+            continue
         ring = [(sx + dx, sy + dy) for dx in range(-r, r + 1) for dy in range(-r, r + 1) if max(abs(dx), abs(dy)) == r]
         for x, y in sorted(ring, key=lambda p: (p[0] - sx) ** 2 + (p[1] - sy) ** 2):
             if inside(templates, map_id, x, y) and not taken(x, y):
@@ -204,7 +213,8 @@ def guard_battle(snap: PlayerSnapshot, templates: GameTemplates, guard: int) -> 
     (``army_soldiers``), o herói na 4 e o guarda na 5 com a vida de um soldado (Live / 100)."""
     soldiers, pawn_tpl = army_soldiers(snap, templates)
     guard_row = templates.get("PawnTempInfos", guard) or {}
-    hp = max(1, int(guard_row.get("Live", 100)) // 100)
+    raw_live = int(guard_row.get("Live", 100))
+    hp = max(1, raw_live if raw_live < 1000 else raw_live // 100)
     soldiers.append(
         {"livingId": 4, "tempId": guard, "type": 1, "side": 2, "pos": 5,
          "initHp": hp, "hp": hp, "qteTime": 0, "castTime": 6000}

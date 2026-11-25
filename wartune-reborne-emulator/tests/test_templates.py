@@ -61,3 +61,24 @@ async def test_download_replaces_local_file_only_when_valid(tmp_path: Path) -> N
         with pytest.raises(aiohttp.ClientResponseError):
             await GameTemplates.download(str(cdn.make_url("/nada.xml")), cache)
     assert zlib.decompress(cache.read_bytes()) == XML
+
+
+@pytest.mark.asyncio
+async def test_h5_extras_merged_and_system_open() -> None:
+    from types import SimpleNamespace
+
+    from wartune_server.game.handlers.login_h5 import send_h5_system_open
+
+    t = await GameTemplates.load(Path("data/templates/tempinfos.xml"))
+    row = t.get("ShopTempInfos", 10001, key="Id")
+    assert row is not None
+    assert row["ItemId"] == "2030503"
+    assert row["VIP0Count"] == "20"
+    assert 101 in t.h5_system_open
+
+    sent = []
+    fake_conn = SimpleNamespace(client_id=1, send=lambda pkt: sent.append(pkt))
+    fake_sess = SimpleNamespace(is_h5=True, ctx=SimpleNamespace(templates=t), connection=fake_conn)
+    send_h5_system_open(fake_sess)  # type: ignore[arg-type]
+    assert len(sent) == 1
+    assert sent[0].code == 537

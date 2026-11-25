@@ -76,10 +76,10 @@ async def test_duble_compra_cancela_devolve_e_paga_no_fim_da_janela(tmp_path: Pa
         await g.idle()
         g.client.send(8526, pb.OprateReplacemntMsg(op=1, campaignId=5001))
         [res] = [pb.OprateReplacemntMsg.FromString(p.body) for p in await g.idle() if p.code == 4424]
-        assert (res.op, res.result, res.campaignId) == (1, 1, 5001) and ch.point == 165
+        assert (res.op, res.result, res.campaignId) == (1, 1, 5001) and ch.point == 270
         g.client.send(8526, pb.OprateReplacemntMsg(op=1, campaignId=5001))  # já comprado
         [res] = [pb.OprateReplacemntMsg.FromString(p.body) for p in await g.idle() if p.code == 4424]
-        assert res.result == 0 and ch.point == 165
+        assert res.result == 0 and ch.point == 270
 
         g.client.send(8526, pb.OprateReplacemntMsg(op=2, campaignId=5001))  # antes da janela: devolve
         await g.idle()

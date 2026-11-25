@@ -525,7 +525,7 @@ GOODS_CONDITIONS = {27, 28, 32, 49}
 # (visto) só estes tipos mandam o 112 do progresso antes da entrega (5014): captura EN 23 (#211), 2 (#631), 10 (#2180);
 # oficial_20261023-171155-1 21 (#4274, missão 200), 29 (#4978, 221) e 51 (#5889, 819). Sem ele: 8, 20, 22, 26, 27, 42
 PROGRESS_BEFORE_FINISH = {NOVICE_CONDITION, BUILDING_CONDITION, 10, 21, 29, 51}
-QUEST_GOODS_SON = "210"  # SonType do item só de missão (2100001): a entrega tira todas as unidades (goods_to_take)
+QUEST_GOODS_SON = ("210", "208")  # SonType do item só de missão (2100001): a entrega tira todas as unidades (goods_to_take)
 # (cliente) newbie.xml (espelho inglês res134 ui/zh_cn), saveId: o maior salto do guia é 28500 -> 32000 (3500)
 # ponytail: teto de salto em vez da lista exata de saveId; a lista seria o próximo passo
 NOVICE_STEP_MAX = 3500
@@ -569,7 +569,18 @@ def goods_count(snap: PlayerSnapshot, template_id: int) -> int:
 
 def arm_avatar(snap: PlayerSnapshot, templates: GameTemplates) -> str:
     """``ArmyArmyMsg.arm``: arte da arma equipada (``/wizard_arms002``)."""
-    return next((r.get("Avata", "") for r in equipment(snap, templates) if r.get("SonType") == WEAPON), "")
+    for r in equipment(snap, templates):
+        if r.get("SonType") == WEAPON:
+            if avata := r.get("Avata"):
+                return avata
+            tid = int(r.get("TemplateId") or 0)
+            if tid == 1011002:
+                return "/warrior_arms002"
+            if tid == 1012002:
+                return "/ranger_arms002"
+            if tid == 1013002:
+                return "/wizard_arms002"
+    return ""
 
 
 def cloth_avatar(snap: PlayerSnapshot, templates: GameTemplates) -> str:
@@ -910,7 +921,7 @@ def goods_to_take(snap: PlayerSnapshot, templates: GameTemplates, template_id: i
             tid = int(cond["Para1"])
             have = goods_count(snap, tid)
             son = (templates.get("ItemTempInfos", tid) or {}).get("SonType")
-            take.append((tid, have if son == QUEST_GOODS_SON else min(have, int(cond["Para2"]))))
+            take.append((tid, have if son in QUEST_GOODS_SON else min(have, int(cond["Para2"]))))
     return take
 
 

@@ -224,16 +224,11 @@ def player_msg(
         trialCount=torres.used(snap, torres.SPIRE, now),  # The Spire: entradas de hoje (game/torres)
         trialMaxCount=torres.MAX_PER_DAY,
         campaignMaxcount=copies[1],
-        lastFreeSkillLearnTime=fmt_time(free_skill) if (free_skill := sy.pet_free_skill_at if sy else None) else NEVER,
-        rentalBagTime=fmt_time(c.rental_bag_until) if c.rental_bag_until else NEVER,
-        status=1 if c.rental_bag_until is not None and c.rental_bag_until > now else -1,
         bagCount=c.bag_count,
         storeGrade=c.store_grade,
         storeGp=c.store_gp,
         appellId=c.appell_id,
         qteGuide=c.qte_guide,
-        hasVicePassword=int(bool(c.vice_password)),
-        isDuringToResetTime=int(c.vice_reset_at is not None),
         refuseFriend=c.refuse_friend,
         refuseInvite=c.refuse_invite,
         refuseTeamInvite=c.refuse_team_invite,
@@ -325,7 +320,11 @@ def castle_msg(snap: PlayerSnapshot, castle: Castle, defence: int = 0) -> pb.Bas
 
 
 def system_property(now: datetime, opened_at: datetime) -> pb.SystemPropertyMsg:
-    return pb.SystemPropertyMsg(sysCurtime=fmt_time(now), sysStarTime=fmt_time(opened_at))
+    return pb.SystemPropertyMsg(
+        sysCurtime=fmt_time(now),
+        sysStarTime=fmt_time(opened_at),
+        sysMillisecond=int(now.timestamp() * 1000),
+    )
 
 
 def buildings_msg(

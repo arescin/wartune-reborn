@@ -110,7 +110,12 @@ def gold_max(snap: PlayerSnapshot, templates: GameTemplates, now: datetime) -> i
     """Teto do armazém (301), + o Gold Expansion Scroll ("Warehouse Capacity +{Grades}%", ``buffs.GOLD_MAX``)."""
     depot = by_son_type(snap, templates, DEPOT)
     row = template(templates, depot.template_id) if depot else None
-    return buffs.boost(int(row["Property2"]) if row else BASE_GOLD_MAX, snap, buffs.GOLD_MAX, now)
+    cap = BASE_GOLD_MAX
+    if row:
+        p1 = int(row.get("Property1") or 0)
+        p2 = int(row.get("Property2") or 0)
+        cap = p2 if p2 > 0 else (p1 if p1 > 0 else BASE_GOLD_MAX)
+    return buffs.boost(cap, snap, buffs.GOLD_MAX, now)
 
 
 def pending_gold(snap: PlayerSnapshot, templates: GameTemplates, now: datetime) -> tuple[int, datetime | None]:
@@ -268,12 +273,16 @@ def unlock(snap: PlayerSnapshot, templates: GameTemplates, building: Building) -
         return []
     new = []
     for level in templates.find("BuildingTempInfos", SonType=row["SonType"]):
-        target = template(templates, int(level.get("NextTemplateId") or 0))
-        if target is None or int(level["BuildingGrade"]) > int(row["BuildingGrade"]):
-            continue
-        if by_son_type(snap, templates, int(target["SonType"])) is None:
-            new.append(Building(snap.character.id or 0, int(target["TemplateId"])))
-            snap.buildings.append(new[-1])
+        raw_next = level.get("NextTemplateId") or "0"
+        for part in raw_next.split(","):
+            if not part.strip():
+                continue
+            target = template(templates, int(part.strip()))
+            if target is None or int(level["BuildingGrade"]) > int(row["BuildingGrade"]):
+                continue
+            if by_son_type(snap, templates, int(target["SonType"])) is None:
+                new.append(Building(snap.character.id or 0, int(target["TemplateId"])))
+                snap.buildings.append(new[-1])
     return new
 
 

@@ -17,10 +17,11 @@ KEY_SIZE: Final[int] = 8
 class StreamCipher:
     """Estado de chave de uma direção (envio ou recebimento)."""
 
-    __slots__ = ("_key",)
+    __slots__ = ("_key", "is_h5")
 
-    def __init__(self, key: bytes = DEFAULT_KEY) -> None:
+    def __init__(self, key: bytes = DEFAULT_KEY, *, is_h5: bool = False) -> None:
         self._key = bytearray(self._validate(key))
+        self.is_h5 = is_h5
 
     @staticmethod
     def _validate(key: bytes) -> bytes:
@@ -32,7 +33,7 @@ class StreamCipher:
     def key(self) -> bytes:
         return bytes(self._key)
 
-    def reset(self, key: bytes) -> None:
+    def reset(self, key: bytes = DEFAULT_KEY) -> None:
         self._key[:] = self._validate(key)
 
     def encrypt(self, plain: bytes) -> bytes:
@@ -48,20 +49,24 @@ class StreamCipher:
         return bytes(out)
 
     def decrypt(self, cipher: bytes) -> bytes:
-        return self._decrypt(cipher, self._key)
+        return self._decrypt(cipher, self._key, self.is_h5)
 
     def peek(self, cipher: bytes) -> bytes:
         """Decifra sem avançar o estado (usado para ler o cabeçalho antes do pacote completo)."""
-        return self._decrypt(cipher, bytearray(self._key))
+        return self._decrypt(cipher, bytearray(self._key), self.is_h5)
 
     @staticmethod
-    def _decrypt(cipher: bytes, key: bytearray) -> bytes:
+    def _decrypt(cipher: bytes, key: bytearray, is_h5: bool = False) -> bytes:
         out = bytearray(len(cipher))
         for i, byte in enumerate(cipher):
             if i == 0:
                 out[0] = byte ^ key[0]
                 continue
             k = i % KEY_SIZE
-            key[k] = ((key[k] + cipher[i - 1]) ^ i) & 0xFF
-            out[i] = ((byte - cipher[i - 1]) & 0xFF) ^ key[k]
+            prev = cipher[i - 1]
+            key[k] = ((key[k] + prev) ^ i) & 0xFF
+            if is_h5:
+                out[i] = (byte ^ ((key[k] + prev) & 0xFF)) & 0xFF
+            else:
+                out[i] = ((byte - prev) & 0xFF) ^ key[k]
         return bytes(out)

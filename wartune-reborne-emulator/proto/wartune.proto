@@ -21,7 +21,8 @@ message ActiveParamMsg {
   optional int32 getBindingDia = 4;
   optional int32 harvestCount = 5;
   repeated GItemInfoMsg itemInfos = 6;
-  repeated GetItemInfosMsg getInfos = 7;
+  repeated GItemInfoMsg itemInfos2 = 7;
+  repeated GetItemInfosMsg getInfos = 8;
 }
 
 // com.road.yishi.proto.active.ActiveRspInfo
@@ -623,7 +624,7 @@ message BottleDropListMsg {
   repeated BottlePackage score = 2;
   repeated BottlePackage storey = 3;
   optional bool open = 4;
-  optional int64 endTime = 5;
+  optional string endTime = 5;
 }
 
 // com.road.yishi.proto.item.BottleItemInfoMsg
@@ -1875,17 +1876,19 @@ message DepositActiveMsg {
   optional int64 actionTimeContent = 6;
   optional int32 consortia = 7;
   optional int32 grades = 8;
-  optional string setStartDate = 9;
-  optional string setEndDate = 10;
-  optional string getStartDate = 11;
-  optional string getEndDate = 12;
+  optional int64 setStartDate = 9;
+  optional int64 setEndDate = 10;
+  optional int64 getStartDate = 11;
+  optional int64 getEndDate = 12;
   optional int32 depositLevel = 13;
-  optional string depositTime = 14;
+  optional int64 depositTime = 14;
   optional int32 opType = 15;
   optional int32 opParam = 16;
   repeated GItemInfoMsg harvestedInfos = 17;
   repeated ActiveParamMsg activeParams = 18;
   repeated GetLogMsg logs = 19;
+  optional int32 chargePoint = 20;
+  optional int32 sort = 21;
 }
 
 // com.road.yishi.proto.simple.DetailReqMsg
@@ -2800,6 +2803,28 @@ message HeroHideFashionReqMsg {
   optional int32 hide = 1;
 }
 
+// com.road.yishi.proto.battle.SkillStateMsg
+message SkillStateMsg {
+  optional int32 skillId = 1;
+  optional int32 state = 2;
+  optional int32 index = 3;
+}
+
+// com.road.yishi.proto.battle.TitanInfoMsg
+message TitanInfoMsg {
+  optional int32 titanId = 1;
+  repeated SkillStateMsg titanSkill = 2;
+}
+
+// com.road.yishi.proto.battle.ReplaceSkillMsg
+message ReplaceSkillMsg {
+  optional string fastKey = 1;
+  optional string petFastKey = 2;
+  optional string childFastKey = 3;
+  repeated int32 childSkills = 4;
+  optional string talnetSkill = 5;
+}
+
 // com.road.yishi.proto.battle.HeroMsg
 message HeroMsg {
   optional int32 heroId = 1;
@@ -2875,11 +2900,50 @@ message HeroMsg {
   optional int32 strength = 71;
   optional int32 tenacity = 72;
   optional bool hasShadow = 73;
-  repeated int32 marriageSkills = 74;
-  optional int32 mateId = 75;
-  optional string mateServerName = 76;
-  repeated TrialInfoMsg marSkills = 77;
-  optional int32 curturn = 78;
+  optional int32 penetrate = 74;
+  optional int32 transferGrade = 75;
+  repeated int32 marriageSkills = 76;
+  optional int32 mateId = 77;
+  repeated TrialInfoMsg marSkills = 78;
+  optional string mateServerName = 79;
+  optional int32 stunAttr = 80;
+  optional bool isFollow = 81;
+  optional int32 multiLordsInspireLevel = 82;
+  optional int32 spMax = 83;
+  optional int32 hitPoint = 84;
+  optional int32 hitPointMax = 85;
+  optional int32 spLimit = 86;
+  optional int32 growthGrade = 87;
+  optional int32 curturn = 88;
+  optional int32 scuffleSequence = 89;
+  optional bool isFight = 90;
+  optional int32 changeBranch = 91;
+  optional TitanInfoMsg titanInfo = 92;
+  optional bool isSlaveChild = 93;
+  optional int32 followChild = 94;
+  optional int32 relicSkillId = 95;
+  optional string awakeBuffers = 96;
+  optional int32 awakeSkillId = 97;
+  optional int32 childAwake = 98;
+  optional bool isManualChild = 99;
+  optional bool isDragonTalker = 100;
+  optional int32 fightMount = 101;
+  optional int32 belief = 102;
+  optional int32 actionBelief = 103;
+  optional ReplaceSkillMsg replaceSkill = 104;
+  optional bool isCaptain = 105;
+  optional int32 avengerSp = 106;
+  optional int32 avengerCd = 107;
+  optional int32 avengerLeftCd = 108;
+  repeated int32 avengerSkills = 109;
+  repeated int32 avengerAllSkills = 110;
+  optional int32 avengerGrade = 111;
+  optional int32 reduceResiAgainst = 112;
+  optional int32 resiPenetrate = 113;
+  repeated int32 warSoulSkills = 114;
+  optional int32 warSoulSp = 115;
+  optional int32 warSoulType = 116;
+  repeated int32 addSkills = 117;
 }
 
 // com.road.yishi.proto.battle.HeroOrderMsg
@@ -4474,7 +4538,7 @@ message PlayerMsg {
   optional int32 claimId = 14;
   optional string claimName = 15;
   optional int32 grades = 16;
-  optional int32 gp = 17;
+  optional int64 gp = 17;
   optional int32 repute = 18;
   optional int32 consortiaOffer = 19;
   optional int64 strategy = 20;
@@ -4545,13 +4609,85 @@ message PlayerMsg {
   optional bool isBackPlayer = 85;
   optional bool refuseTeamInvite = 86;
   optional int32 campaignMaxcount = 87;
-  optional int32 expLimit = 88;
-  optional int32 hasVicePassword = 89;
-  optional int32 isDuringToResetTime = 90;
-  optional int32 leadExtractTimes = 91;
-  optional string lastFreeSkillLearnTime = 92;
-  optional string rentalBagTime = 93;
-  optional int32 status = 94;
+  optional int32 seniorStoreGrade = 88;
+  optional int32 seniorStoreGp = 89;
+  optional int32 dragonCampaign_Count = 90;
+  optional int32 dragonCampaign_MaxCount = 91;
+  optional int32 crossGuildScore = 92;
+  optional int32 crossLeagueMedal = 93;
+  optional bool applleProperty_Open = 94;
+  optional int32 hasVicePassword = 95;
+  optional int32 isDuringToResetTime = 96;
+  optional string rentalBagTime = 97;
+  optional int32 status = 98;
+  optional int32 newPowerLv = 99;
+  optional int32 newAgilityLv = 100;
+  optional int32 newIntellectLv = 101;
+  optional int32 newPhysiqueLv = 102;
+  optional int32 famGpLv = 103;
+  optional int32 medalLv = 104;
+  optional int32 honorLv = 105;
+  optional int32 propertyLv = 106;
+  optional int32 leadExtractTimes = 107;
+  optional int32 randomBossCount = 108;
+  optional int32 monopolyCampaignCount = 109;
+  optional bool jumpNovice = 110;
+  optional string skills = 111;
+  optional string skillGrade = 112;
+  optional string skillProficiency = 113;
+  optional bool isCost = 114;
+  optional int32 skillComposeTimes = 115;
+  optional int32 skillCollectTimes = 116;
+  optional string composeId = 117;
+  optional int32 teamCount = 118;
+  optional int32 teamMaxCount = 119;
+  optional int32 seekSurplusTime = 120;
+  optional int32 recoverGP = 121;
+  optional int32 terraTempleCount = 122;
+  optional int32 terraTempleMaxCount = 123;
+  optional string lastFreeSkillLearnTime = 124;
+  optional int32 stoneBagCount = 125;
+  optional int32 tramcarCount = 126;
+  optional int32 weekCampaignCount = 127;
+  optional int32 weekCampaignMaxCount = 128;
+  optional int32 trialTowerCampaignCount = 129;
+  optional int32 trialTowerCampaignMaxCount = 130;
+  optional int32 fantasyMatrixCampaignCount = 131;
+  optional int32 fantasyMatrixCampaignMaxCount = 132;
+  optional int32 bloodyRealmCampaignCount = 133;
+  optional int32 bloodyRealmCampaignMaxCount = 134;
+  optional int32 equipmentRefiningGrade = 135;
+  optional int32 equipmentRefiningGp = 136;
+  optional string uuid = 137;
+  optional int32 petPveCount = 138;
+  optional int32 petPveMaxCount = 139;
+  optional int32 quickPassCount = 140;
+  optional int32 guardWarCount = 141;
+  optional int32 guardWarMaxCount = 142;
+  optional int32 timeVortexCount = 143;
+  optional int32 timeVortexNode = 144;
+  optional bool isOpenDragonTalker = 145;
+  optional bool isCurrentDragonTalker = 146;
+  optional int32 masterPowerLv = 147;
+  optional int32 masterAgilityLv = 148;
+  optional int32 masterIntellectLv = 149;
+  optional int32 masterPhysiqueLv = 150;
+  optional int32 abyssPrisonCount = 151;
+  optional int32 abyssPrisonMaxCount = 152;
+  optional int32 blackGoldCaveLeftCount = 153;
+  optional int32 blackGoldCaveMaxCount = 154;
+  optional int32 rushCustomsLeftCount = 155;
+  optional int32 rushCustomsMaxCount = 156;
+  optional int32 elementSilvaMaxCount = 157;
+  optional int32 elementSilvaLeftCount = 158;
+  optional int32 dungeonTurnLeftRewardCount = 159;
+  optional int32 dungeonTurnMaxRewardCount = 160;
+  optional int32 timeSpaceLeftRewardCount = 161;
+  optional int32 timeSpaceMaxRewardCount = 162;
+  optional int32 skyStepCount = 163;
+  optional int32 skyStepMaxCount = 164;
+  optional int32 runeCount = 165;
+  optional int32 runePowerPoint = 166;
 }
 
 // com.road.yishi.proto.vehicle.PlayerMutualRspMsg

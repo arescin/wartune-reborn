@@ -10,7 +10,9 @@ entre corrotinas sem trava.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import struct
 import zlib
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
@@ -59,23 +61,56 @@ class HeroTemplate:
 
 
 class GameTemplates:
-    def __init__(self, categories: dict[str, list[Row]], nested: dict[str, list[Row]] | None = None) -> None:
+    def __init__(
+        self,
+        categories: dict[str, list[Row]],
+        nested: dict[str, list[Row]] | None = None,
+        h5_system_open: tuple[int, ...] = (),
+    ) -> None:
         """``nested``: as linhas do nível a mais (só o ``TollgateReward``: ``ScoreRewards``, ``BossRewards``...),
         pelo nome do grupo; ``rows``/``get``/``find`` acham também por esse nome."""
         self._categories = categories
         self._nested = nested or {}
         self._index: dict[tuple[str, str], dict[str, Row]] = {}
+        self.h5_system_open = h5_system_open
         self._heroes = {
             t.template_id: t for t in (HeroTemplate.from_row(r) for r in categories.get("GameHeroTemp", []))
         }
 
     @classmethod
     def parse(cls, data: bytes) -> GameTemplates:
-        if data[:1] == b"\x78":  # cabeçalho zlib
+        if len(data) >= 5 and data[4:5] == b"\x78":
+            data = zlib.decompress(data[4:])
+        elif data[:1] == b"\x78":  # cabeçalho zlib
             data = zlib.decompress(data)
+
+        # Formato binário oficial 7Road (versão uint32 + tabelas com tamanho de nome e corpo)
+        if len(data) >= 4 and not data.lstrip().startswith(b"<"):
+            p = 4
+            categories: dict[str, list[Row]] = {}
+            nested: dict[str, list[Row]] = {}
+            while p < len(data):
+                n = data[p]
+                p += 1
+                name = data[p : p + n].decode("utf-8", "ignore")
+                p += n
+                ln = struct.unpack(">i", data[p : p + 4])[0]
+                p += 4
+                xml_bytes = data[p : p + ln]
+                p += ln
+                try:
+                    root = ElementTree.fromstring(xml_bytes)
+                except ElementTree.ParseError:
+                    continue
+                categories[root.tag] = [MappingProxyType(dict(item.attrib)) for item in root]
+                for group in root:
+                    if len(group):
+                        nested[group.tag] = [MappingProxyType(dict(row.attrib)) for row in group]
+            return cls(categories, nested)
+
         root = ElementTree.fromstring(data)
-        categories: dict[str, list[Row]] = {}
-        nested: dict[str, list[Row]] = {}
+        categories = {}
+        nested = {}
         for category in root:
             categories[category.tag] = [MappingProxyType(dict(item.attrib)) for item in category]
             for group in category:
@@ -86,7 +121,33 @@ class GameTemplates:
     @classmethod
     async def load(cls, path: Path) -> GameTemplates:
         data = await asyncio.to_thread(path.read_bytes)
-        return await asyncio.to_thread(cls.parse, data)
+        templates = await asyncio.to_thread(cls.parse, data)
+        extras_path = path.with_name("h5_extras.json")
+        if await asyncio.to_thread(extras_path.is_file):
+            raw_extras = await asyncio.to_thread(extras_path.read_text, "utf-8")
+            extras = json.loads(raw_extras)
+            templates._merge_h5_extras(extras)
+        return templates
+
+    def _merge_h5_extras(self, extras: dict[str, object]) -> None:
+        """Complementa ``ShopTempInfos``/``ItemTempInfos`` com ofertas e itens exclusivos do cliente H5."""
+        for cat, key in (("ShopTempInfos", "Id"), ("ItemTempInfos", "TemplateId")):
+            rows = extras.get(cat)
+            if not isinstance(rows, list):
+                continue
+            existing = self._categories.setdefault(cat, [])
+            known = {r.get(key, "") for r in existing}
+            for item in rows:
+                if not isinstance(item, dict):
+                    continue
+                val = str(item.get(key, ""))
+                if val and val not in known:
+                    existing.append(MappingProxyType({str(k): str(v) for k, v in item.items()}))
+                    known.add(val)
+        sys_ids = extras.get("H5SystemOpen")
+        if isinstance(sys_ids, list):
+            self.h5_system_open = tuple(int(x) for x in sys_ids)
+        self._index.clear()
 
     @classmethod
     async def download(cls, url: str, path: Path) -> GameTemplates:

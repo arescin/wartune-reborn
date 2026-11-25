@@ -60,8 +60,16 @@ PRIVILEGES = {
     18: "Skip Sylph Arena Battle: arena.py pet_end_battle (8727)",
     19: "VIP-exclusive mount: S_VIP_MOUNT 4610 e a montaria MountType 3",
     20: "Activate Dungeon VIP Chest: campaign.py baú VIP (custo em Kyanite)",
+    21: "Auto temper sylph equipment: cliente",
+    200: "Max plans: cliente",
+    202: "Conversion discount: cliente",
     203: "Victory & Failure Chests (Tank Trials): para1 0 em todos os níveis, sem efeito",
+    204: "Cross-server bullhorns: cliente",
     205: "Sylph skill learning: pets.py VIP_SKILL_WAIT",
+    206: "Auto capture astral: StarManager",
+    207: "Auto sign-in guardian arena: cliente",
+    208: "VIP Shop discount: cliente",
+    209: "Multiplayer dungeon attempts: cliente",
 }
 ALCHEMY_COUNT = 20  # remainCount 20 sem VIP (visto: oficial_encantar #7, igual ao turco login.json #9)
 ALCHEMY_GRADE = 14  # MainToolBar: o cliente pede o 8320 de novo ao chegar no nível 14
@@ -179,9 +187,43 @@ def _vip_msg(s: GameSession, snap: PlayerSnapshot) -> pb.VipInfoMsg:
     )
 
 
+def _encode_varint(value: int) -> bytes:
+    bits = value & 0x7FFFFFFFFFFFFFFF
+    out = bytearray()
+    while True:
+        b = bits & 0x7F
+        bits >>= 7
+        if bits:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            break
+    return bytes(out)
+
+
 def send_vip(s: GameSession) -> None:
     assert s.snapshot is not None
-    s.send(S_VIP, b.complete(_vip_msg(s, s.snapshot)))
+    if getattr(s, "is_h5", False):
+        st = ev.peek(s.snapshot, "vip")
+        gp = st.value if st else 0
+        grade = vip_grade(s, s.snapshot)
+        # Wire format protobuf H5 para VipInfoMsg:
+        # tag 1: vipGp (int32, wireType 0) -> 8
+        # tag 2: vipGrade (int32, wireType 0) -> 16
+        # tag 3: isGainBuff (bool, wireType 0) -> 24
+        # tag 4: buffGainTime (int64, wireType 0) -> 32
+        # tag 5: buffEndTime (int64, wireType 0) -> 40
+        body = bytearray()
+        if gp:
+            body.append((1 << 3) | 0)
+            body.extend(_encode_varint(gp))
+        if grade:
+            body.append((2 << 3) | 0)
+            body.extend(_encode_varint(grade))
+        from ...protocol.packet import Packet
+        s.connection.send(Packet(S_VIP, bytes(body), s.player_id))
+    else:
+        s.send(S_VIP, b.complete(_vip_msg(s, s.snapshot)))
 
 
 def vip_changed(s: GameSession) -> None:

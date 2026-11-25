@@ -1,51 +1,44 @@
-# Dockerfile para o Servidor de Jogo Wartune Reborn (Python / asyncio)
 FROM python:3.12-slim
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app/src
+# Dependências de sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar uv via pip (garantido e compatível com uv_build)
+RUN pip install --no-cache-dir "uv>=0.12.3"
 
 WORKDIR /app
 
-# Instalar dependências de sistema mínimas (curl e netcat)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copiar arquivos de dependências
-COPY pyproject.toml uv.lock ./
-
-# Instalar dependências Python via pip
-RUN pip install --no-cache-dir --upgrade pip setuptools && \
-    pip install --no-cache-dir \
-    aiohttp>=3.14.3 \
-    aiosqlite>=0.22.1 \
-    alembic>=1.20.0 \
-    asyncmy>=0.2.16 \
-    asyncpg>=0.32.0 \
-    cryptography>=50.0.1 \
-    protobuf>=7.36.1 \
-    pydantic-settings>=2.15.0 \
-    "sqlalchemy[asyncio]>=2.0.30" \
-    structlog>=26.1.0 \
-    tzdata>=2025.2
-
-# Copiar código-fonte, dados e ferramentas
+# Copiar arquivos de configuração e código necessários para o build
+COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
-COPY data/ ./data/
-COPY tools/ ./tools/
 COPY proto/ ./proto/
-COPY entrypoint.sh /entrypoint.sh
+COPY data/ ./data/
+COPY bundled_cdn/ ./bundled_cdn/
 
-RUN chmod +x /entrypoint.sh
+# Sincronizar dependências e instalar o pacote wartune-server
+RUN uv sync --no-dev
 
-# Portas:
-# 8080 = HTTP (REQUEST_PATH)
-# 5000 = Game TCP Socket
-# 5001 = WebSocket (Ruffle proxy)
-# 843 = Flash Policy Server
+# Criar pastas para dados e logs
+RUN mkdir -p /app/data/templates /app/logs
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    WARTUNE_BIND_HOST="0.0.0.0" \
+    WARTUNE_PUBLIC_HOST="0.0.0.0" \
+    WARTUNE_HTTP_PORT=8080 \
+    WARTUNE_SOCKET_PORT=5000 \
+    WARTUNE_WEBSOCKET_PORT=5001 \
+    WARTUNE_POLICY_PORT=843 \
+    WARTUNE_DATABASE_URL="sqlite+aiosqlite:////app/data/wartune.db" \
+    WARTUNE_TEMPLATES_FILE="/app/data/templates/tempinfos.xml" \
+    WARTUNE_RSA_KEY_FILE="/app/data/rsa_private.pem" \
+    WARTUNE_EVENTS_FILE="/app/data/events.json" \
+    WARTUNE_LOG_DIR="/app/logs" \
+    WARTUNE_LOG_LEVEL="INFO"
+
 EXPOSE 8080 5000 5001 843
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["run"]
+CMD ["sh", "-c", "mkdir -p /app/data/cdn && cp -rf /app/bundled_cdn/* /app/data/cdn/ 2>/dev/null || true; uv run wartune-server db init && exec uv run wartune-server run"]

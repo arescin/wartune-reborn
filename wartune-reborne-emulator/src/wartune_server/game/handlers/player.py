@@ -256,7 +256,7 @@ async def synchronized_time(s: GameSession, _: object) -> None:
 
         _army_refresh(s, now)
         rate_refresh(s, now)
-    s.send(S_TIME, pb.SynchronizedTimeMsg(sysCurtime=b.fmt_time(now)))
+    s.send(S_TIME, pb.SynchronizedTimeMsg(sysCurtime=b.fmt_time(now), sysMillisecond=int(now.timestamp() * 1000)))
     roll_monsters(s)
     if s.snapshot is not None and s.snapshot.castle is not None:
         await refresh(s, push=True)

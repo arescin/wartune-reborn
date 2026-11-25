@@ -25,13 +25,14 @@ class ActiveData(_message.Message):
     def __init__(self, packdata: _Optional[_Iterable[_Union[PackageData, _Mapping]]] = ..., value: _Optional[int] = ..., activeId: _Optional[str] = ..., isShow: _Optional[bool] = ..., type: _Optional[int] = ..., activeCharge: _Optional[int] = ..., consumeMsg: _Optional[_Iterable[_Union[ConsumeInfoMsg, _Mapping]]] = ...) -> None: ...
 
 class ActiveParamMsg(_message.Message):
-    __slots__ = ("level", "costDiamond", "costContract", "getBindingDia", "harvestCount", "itemInfos", "getInfos")
+    __slots__ = ("level", "costDiamond", "costContract", "getBindingDia", "harvestCount", "itemInfos", "itemInfos2", "getInfos")
     LEVEL_FIELD_NUMBER: _ClassVar[int]
     COSTDIAMOND_FIELD_NUMBER: _ClassVar[int]
     COSTCONTRACT_FIELD_NUMBER: _ClassVar[int]
     GETBINDINGDIA_FIELD_NUMBER: _ClassVar[int]
     HARVESTCOUNT_FIELD_NUMBER: _ClassVar[int]
     ITEMINFOS_FIELD_NUMBER: _ClassVar[int]
+    ITEMINFOS2_FIELD_NUMBER: _ClassVar[int]
     GETINFOS_FIELD_NUMBER: _ClassVar[int]
     level: int
     costDiamond: int
@@ -39,8 +40,9 @@ class ActiveParamMsg(_message.Message):
     getBindingDia: int
     harvestCount: int
     itemInfos: _containers.RepeatedCompositeFieldContainer[GItemInfoMsg]
+    itemInfos2: _containers.RepeatedCompositeFieldContainer[GItemInfoMsg]
     getInfos: _containers.RepeatedCompositeFieldContainer[GetItemInfosMsg]
-    def __init__(self, level: _Optional[int] = ..., costDiamond: _Optional[int] = ..., costContract: _Optional[int] = ..., getBindingDia: _Optional[int] = ..., harvestCount: _Optional[int] = ..., itemInfos: _Optional[_Iterable[_Union[GItemInfoMsg, _Mapping]]] = ..., getInfos: _Optional[_Iterable[_Union[GetItemInfosMsg, _Mapping]]] = ...) -> None: ...
+    def __init__(self, level: _Optional[int] = ..., costDiamond: _Optional[int] = ..., costContract: _Optional[int] = ..., getBindingDia: _Optional[int] = ..., harvestCount: _Optional[int] = ..., itemInfos: _Optional[_Iterable[_Union[GItemInfoMsg, _Mapping]]] = ..., itemInfos2: _Optional[_Iterable[_Union[GItemInfoMsg, _Mapping]]] = ..., getInfos: _Optional[_Iterable[_Union[GetItemInfosMsg, _Mapping]]] = ...) -> None: ...
 
 class ActiveRspInfo(_message.Message):
     __slots__ = ("activeId", "title", "contents", "awardContent", "description", "actionTimeContent", "consortia", "grades", "sort", "endDate", "startDate")
@@ -1007,8 +1009,8 @@ class BottleDropListMsg(_message.Message):
     score: _containers.RepeatedCompositeFieldContainer[BottlePackage]
     storey: _containers.RepeatedCompositeFieldContainer[BottlePackage]
     open: bool
-    endTime: int
-    def __init__(self, dropItem: _Optional[_Iterable[_Union[BottleItemInfoMsg, _Mapping]]] = ..., score: _Optional[_Iterable[_Union[BottlePackage, _Mapping]]] = ..., storey: _Optional[_Iterable[_Union[BottlePackage, _Mapping]]] = ..., open: _Optional[bool] = ..., endTime: _Optional[int] = ...) -> None: ...
+    endTime: str
+    def __init__(self, dropItem: _Optional[_Iterable[_Union[BottleItemInfoMsg, _Mapping]]] = ..., score: _Optional[_Iterable[_Union[BottlePackage, _Mapping]]] = ..., storey: _Optional[_Iterable[_Union[BottlePackage, _Mapping]]] = ..., open: _Optional[bool] = ..., endTime: _Optional[str] = ...) -> None: ...
 
 class BottleItemInfoMsg(_message.Message):
     __slots__ = ("tempId", "count", "isShow", "isNewItems")
@@ -3009,7 +3011,7 @@ class DayActiveRspMsg(_message.Message):
     def __init__(self, dayActiveRspInfo: _Optional[_Iterable[_Union[DayActiveRspInfo, _Mapping]]] = ...) -> None: ...
 
 class DepositActiveMsg(_message.Message):
-    __slots__ = ("activeId", "title", "contents", "activeType", "description", "actionTimeContent", "consortia", "grades", "setStartDate", "setEndDate", "getStartDate", "getEndDate", "depositLevel", "depositTime", "opType", "opParam", "harvestedInfos", "activeParams", "logs")
+    __slots__ = ("activeId", "title", "contents", "activeType", "description", "actionTimeContent", "consortia", "grades", "setStartDate", "setEndDate", "getStartDate", "getEndDate", "depositLevel", "depositTime", "opType", "opParam", "harvestedInfos", "activeParams", "logs", "chargePoint", "sort")
     ACTIVEID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONTENTS_FIELD_NUMBER: _ClassVar[int]
@@ -3029,6 +3031,8 @@ class DepositActiveMsg(_message.Message):
     HARVESTEDINFOS_FIELD_NUMBER: _ClassVar[int]
     ACTIVEPARAMS_FIELD_NUMBER: _ClassVar[int]
     LOGS_FIELD_NUMBER: _ClassVar[int]
+    CHARGEPOINT_FIELD_NUMBER: _ClassVar[int]
+    SORT_FIELD_NUMBER: _ClassVar[int]
     activeId: str
     title: str
     contents: str
@@ -3037,18 +3041,20 @@ class DepositActiveMsg(_message.Message):
     actionTimeContent: int
     consortia: int
     grades: int
-    setStartDate: str
-    setEndDate: str
-    getStartDate: str
-    getEndDate: str
+    setStartDate: int
+    setEndDate: int
+    getStartDate: int
+    getEndDate: int
     depositLevel: int
-    depositTime: str
+    depositTime: int
     opType: int
     opParam: int
     harvestedInfos: _containers.RepeatedCompositeFieldContainer[GItemInfoMsg]
     activeParams: _containers.RepeatedCompositeFieldContainer[ActiveParamMsg]
     logs: _containers.RepeatedCompositeFieldContainer[GetLogMsg]
-    def __init__(self, activeId: _Optional[str] = ..., title: _Optional[str] = ..., contents: _Optional[str] = ..., activeType: _Optional[int] = ..., description: _Optional[str] = ..., actionTimeContent: _Optional[int] = ..., consortia: _Optional[int] = ..., grades: _Optional[int] = ..., setStartDate: _Optional[str] = ..., setEndDate: _Optional[str] = ..., getStartDate: _Optional[str] = ..., getEndDate: _Optional[str] = ..., depositLevel: _Optional[int] = ..., depositTime: _Optional[str] = ..., opType: _Optional[int] = ..., opParam: _Optional[int] = ..., harvestedInfos: _Optional[_Iterable[_Union[GItemInfoMsg, _Mapping]]] = ..., activeParams: _Optional[_Iterable[_Union[ActiveParamMsg, _Mapping]]] = ..., logs: _Optional[_Iterable[_Union[GetLogMsg, _Mapping]]] = ...) -> None: ...
+    chargePoint: int
+    sort: int
+    def __init__(self, activeId: _Optional[str] = ..., title: _Optional[str] = ..., contents: _Optional[str] = ..., activeType: _Optional[int] = ..., description: _Optional[str] = ..., actionTimeContent: _Optional[int] = ..., consortia: _Optional[int] = ..., grades: _Optional[int] = ..., setStartDate: _Optional[int] = ..., setEndDate: _Optional[int] = ..., getStartDate: _Optional[int] = ..., getEndDate: _Optional[int] = ..., depositLevel: _Optional[int] = ..., depositTime: _Optional[int] = ..., opType: _Optional[int] = ..., opParam: _Optional[int] = ..., harvestedInfos: _Optional[_Iterable[_Union[GItemInfoMsg, _Mapping]]] = ..., activeParams: _Optional[_Iterable[_Union[ActiveParamMsg, _Mapping]]] = ..., logs: _Optional[_Iterable[_Union[GetLogMsg, _Mapping]]] = ..., chargePoint: _Optional[int] = ..., sort: _Optional[int] = ...) -> None: ...
 
 class DetailReqMsg(_message.Message):
     __slots__ = ("userId", "serverName", "otherId", "otherName", "itemInfo", "armyInfo", "heroInfo", "pawnInfo")
@@ -7124,7 +7130,7 @@ class PlayerMovieMsg(_message.Message):
     def __init__(self, movieTargetType: _Optional[int] = ..., targetId: _Optional[int] = ..., movieType: _Optional[str] = ..., delay: _Optional[int] = ..., mapId: _Optional[int] = ...) -> None: ...
 
 class PlayerMsg(_message.Message):
-    __slots__ = ("playerId", "nickName", "sex", "pic", "camp", "point", "giftToken", "state", "lastAward", "questSiteLen", "questSite", "consortiaId", "consortiaName", "claimId", "claimName", "grades", "gp", "repute", "consortiaOffer", "strategy", "weary", "attackLeftCount", "noviceProcess", "consortiaAttack", "consortiaDefence", "consortiaAgility", "consortiaAbility", "consortiaCaptain", "gpOrder", "fightingCapacity", "gradeProcess", "timeProcess", "timeGet", "campaignSite", "bagCount", "matchWin", "matchFailed", "consortiaGold", "consortiaPhysique", "right", "job", "leedProcess", "starCount", "signDate", "signTimes", "signSite", "order", "startFree", "totalGp", "refuseFriend", "refuseInvite", "consortiaTotaloffer", "showVersion", "campaignCount", "timeRun", "qteGuide", "starpoint", "isAuto", "lastOutConsortia", "geste", "storeGrade", "storeGp", "reloginProcess", "reloginCount", "blessingCount", "blessingBuff", "blessingMaxCount", "firstCharge", "charm", "matchRoomCount", "kingBuff", "leaveGp", "altarConsortiaId", "serverName", "rewardTimes", "warFieldCount", "trialCount", "appellId", "crossScore", "trialMaxCount", "wearyLimit", "lordsScore", "isReceived", "mineScore", "isBackPlayer", "refuseTeamInvite", "campaignMaxcount", "expLimit", "hasVicePassword", "isDuringToResetTime", "leadExtractTimes", "lastFreeSkillLearnTime", "rentalBagTime", "status")
+    __slots__ = ("playerId", "nickName", "sex", "pic", "camp", "point", "giftToken", "state", "lastAward", "questSiteLen", "questSite", "consortiaId", "consortiaName", "claimId", "claimName", "grades", "gp", "repute", "consortiaOffer", "strategy", "weary", "attackLeftCount", "noviceProcess", "consortiaAttack", "consortiaDefence", "consortiaAgility", "consortiaAbility", "consortiaCaptain", "gpOrder", "fightingCapacity", "gradeProcess", "timeProcess", "timeGet", "campaignSite", "bagCount", "matchWin", "matchFailed", "consortiaGold", "consortiaPhysique", "right", "job", "leedProcess", "starCount", "signDate", "signTimes", "signSite", "order", "startFree", "totalGp", "refuseFriend", "refuseInvite", "consortiaTotaloffer", "showVersion", "campaignCount", "timeRun", "qteGuide", "starpoint", "isAuto", "lastOutConsortia", "geste", "storeGrade", "storeGp", "reloginProcess", "reloginCount", "blessingCount", "blessingBuff", "blessingMaxCount", "firstCharge", "charm", "matchRoomCount", "kingBuff", "leaveGp", "altarConsortiaId", "serverName", "rewardTimes", "warFieldCount", "trialCount", "appellId", "crossScore", "trialMaxCount", "wearyLimit", "lordsScore", "isReceived", "mineScore", "isBackPlayer", "refuseTeamInvite", "campaignMaxcount", "seniorStoreGrade", "seniorStoreGp", "dragonCampaign_Count", "dragonCampaign_MaxCount", "crossGuildScore", "crossLeagueMedal", "applleProperty_Open", "hasVicePassword", "isDuringToResetTime", "rentalBagTime", "status", "newPowerLv", "newAgilityLv", "newIntellectLv", "newPhysiqueLv", "famGpLv", "medalLv", "honorLv", "propertyLv", "leadExtractTimes", "randomBossCount", "monopolyCampaignCount", "jumpNovice", "skills", "skillGrade", "skillProficiency", "isCost", "skillComposeTimes", "skillCollectTimes", "composeId", "teamCount", "teamMaxCount", "seekSurplusTime", "recoverGP", "terraTempleCount", "terraTempleMaxCount", "lastFreeSkillLearnTime", "stoneBagCount", "tramcarCount", "weekCampaignCount", "weekCampaignMaxCount", "trialTowerCampaignCount", "trialTowerCampaignMaxCount", "fantasyMatrixCampaignCount", "fantasyMatrixCampaignMaxCount", "bloodyRealmCampaignCount", "bloodyRealmCampaignMaxCount", "equipmentRefiningGrade", "equipmentRefiningGp", "uuid", "petPveCount", "petPveMaxCount", "quickPassCount", "guardWarCount", "guardWarMaxCount", "timeVortexCount", "timeVortexNode", "isOpenDragonTalker", "isCurrentDragonTalker", "masterPowerLv", "masterAgilityLv", "masterIntellectLv", "masterPhysiqueLv", "abyssPrisonCount", "abyssPrisonMaxCount", "blackGoldCaveLeftCount", "blackGoldCaveMaxCount", "rushCustomsLeftCount", "rushCustomsMaxCount", "elementSilvaMaxCount", "elementSilvaLeftCount", "dungeonTurnLeftRewardCount", "dungeonTurnMaxRewardCount", "timeSpaceLeftRewardCount", "timeSpaceMaxRewardCount", "skyStepCount", "skyStepMaxCount", "runeCount", "runePowerPoint")
     PLAYERID_FIELD_NUMBER: _ClassVar[int]
     NICKNAME_FIELD_NUMBER: _ClassVar[int]
     SEX_FIELD_NUMBER: _ClassVar[int]
@@ -7212,13 +7218,85 @@ class PlayerMsg(_message.Message):
     ISBACKPLAYER_FIELD_NUMBER: _ClassVar[int]
     REFUSETEAMINVITE_FIELD_NUMBER: _ClassVar[int]
     CAMPAIGNMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
-    EXPLIMIT_FIELD_NUMBER: _ClassVar[int]
+    SENIORSTOREGRADE_FIELD_NUMBER: _ClassVar[int]
+    SENIORSTOREGP_FIELD_NUMBER: _ClassVar[int]
+    DRAGONCAMPAIGN_COUNT_FIELD_NUMBER: _ClassVar[int]
+    DRAGONCAMPAIGN_MAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    CROSSGUILDSCORE_FIELD_NUMBER: _ClassVar[int]
+    CROSSLEAGUEMEDAL_FIELD_NUMBER: _ClassVar[int]
+    APPLLEPROPERTY_OPEN_FIELD_NUMBER: _ClassVar[int]
     HASVICEPASSWORD_FIELD_NUMBER: _ClassVar[int]
     ISDURINGTORESETTIME_FIELD_NUMBER: _ClassVar[int]
-    LEADEXTRACTTIMES_FIELD_NUMBER: _ClassVar[int]
-    LASTFREESKILLLEARNTIME_FIELD_NUMBER: _ClassVar[int]
     RENTALBAGTIME_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
+    NEWPOWERLV_FIELD_NUMBER: _ClassVar[int]
+    NEWAGILITYLV_FIELD_NUMBER: _ClassVar[int]
+    NEWINTELLECTLV_FIELD_NUMBER: _ClassVar[int]
+    NEWPHYSIQUELV_FIELD_NUMBER: _ClassVar[int]
+    FAMGPLV_FIELD_NUMBER: _ClassVar[int]
+    MEDALLV_FIELD_NUMBER: _ClassVar[int]
+    HONORLV_FIELD_NUMBER: _ClassVar[int]
+    PROPERTYLV_FIELD_NUMBER: _ClassVar[int]
+    LEADEXTRACTTIMES_FIELD_NUMBER: _ClassVar[int]
+    RANDOMBOSSCOUNT_FIELD_NUMBER: _ClassVar[int]
+    MONOPOLYCAMPAIGNCOUNT_FIELD_NUMBER: _ClassVar[int]
+    JUMPNOVICE_FIELD_NUMBER: _ClassVar[int]
+    SKILLS_FIELD_NUMBER: _ClassVar[int]
+    SKILLGRADE_FIELD_NUMBER: _ClassVar[int]
+    SKILLPROFICIENCY_FIELD_NUMBER: _ClassVar[int]
+    ISCOST_FIELD_NUMBER: _ClassVar[int]
+    SKILLCOMPOSETIMES_FIELD_NUMBER: _ClassVar[int]
+    SKILLCOLLECTTIMES_FIELD_NUMBER: _ClassVar[int]
+    COMPOSEID_FIELD_NUMBER: _ClassVar[int]
+    TEAMCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TEAMMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    SEEKSURPLUSTIME_FIELD_NUMBER: _ClassVar[int]
+    RECOVERGP_FIELD_NUMBER: _ClassVar[int]
+    TERRATEMPLECOUNT_FIELD_NUMBER: _ClassVar[int]
+    TERRATEMPLEMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    LASTFREESKILLLEARNTIME_FIELD_NUMBER: _ClassVar[int]
+    STONEBAGCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TRAMCARCOUNT_FIELD_NUMBER: _ClassVar[int]
+    WEEKCAMPAIGNCOUNT_FIELD_NUMBER: _ClassVar[int]
+    WEEKCAMPAIGNMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TRIALTOWERCAMPAIGNCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TRIALTOWERCAMPAIGNMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    FANTASYMATRIXCAMPAIGNCOUNT_FIELD_NUMBER: _ClassVar[int]
+    FANTASYMATRIXCAMPAIGNMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    BLOODYREALMCAMPAIGNCOUNT_FIELD_NUMBER: _ClassVar[int]
+    BLOODYREALMCAMPAIGNMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    EQUIPMENTREFININGGRADE_FIELD_NUMBER: _ClassVar[int]
+    EQUIPMENTREFININGGP_FIELD_NUMBER: _ClassVar[int]
+    UUID_FIELD_NUMBER: _ClassVar[int]
+    PETPVECOUNT_FIELD_NUMBER: _ClassVar[int]
+    PETPVEMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    QUICKPASSCOUNT_FIELD_NUMBER: _ClassVar[int]
+    GUARDWARCOUNT_FIELD_NUMBER: _ClassVar[int]
+    GUARDWARMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TIMEVORTEXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TIMEVORTEXNODE_FIELD_NUMBER: _ClassVar[int]
+    ISOPENDRAGONTALKER_FIELD_NUMBER: _ClassVar[int]
+    ISCURRENTDRAGONTALKER_FIELD_NUMBER: _ClassVar[int]
+    MASTERPOWERLV_FIELD_NUMBER: _ClassVar[int]
+    MASTERAGILITYLV_FIELD_NUMBER: _ClassVar[int]
+    MASTERINTELLECTLV_FIELD_NUMBER: _ClassVar[int]
+    MASTERPHYSIQUELV_FIELD_NUMBER: _ClassVar[int]
+    ABYSSPRISONCOUNT_FIELD_NUMBER: _ClassVar[int]
+    ABYSSPRISONMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    BLACKGOLDCAVELEFTCOUNT_FIELD_NUMBER: _ClassVar[int]
+    BLACKGOLDCAVEMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    RUSHCUSTOMSLEFTCOUNT_FIELD_NUMBER: _ClassVar[int]
+    RUSHCUSTOMSMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    ELEMENTSILVAMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    ELEMENTSILVALEFTCOUNT_FIELD_NUMBER: _ClassVar[int]
+    DUNGEONTURNLEFTREWARDCOUNT_FIELD_NUMBER: _ClassVar[int]
+    DUNGEONTURNMAXREWARDCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TIMESPACELEFTREWARDCOUNT_FIELD_NUMBER: _ClassVar[int]
+    TIMESPACEMAXREWARDCOUNT_FIELD_NUMBER: _ClassVar[int]
+    SKYSTEPCOUNT_FIELD_NUMBER: _ClassVar[int]
+    SKYSTEPMAXCOUNT_FIELD_NUMBER: _ClassVar[int]
+    RUNECOUNT_FIELD_NUMBER: _ClassVar[int]
+    RUNEPOWERPOINT_FIELD_NUMBER: _ClassVar[int]
     playerId: int
     nickName: str
     sex: int
@@ -7306,14 +7384,86 @@ class PlayerMsg(_message.Message):
     isBackPlayer: bool
     refuseTeamInvite: bool
     campaignMaxcount: int
-    expLimit: int
+    seniorStoreGrade: int
+    seniorStoreGp: int
+    dragonCampaign_Count: int
+    dragonCampaign_MaxCount: int
+    crossGuildScore: int
+    crossLeagueMedal: int
+    applleProperty_Open: bool
     hasVicePassword: int
     isDuringToResetTime: int
-    leadExtractTimes: int
-    lastFreeSkillLearnTime: str
     rentalBagTime: str
     status: int
-    def __init__(self, playerId: _Optional[int] = ..., nickName: _Optional[str] = ..., sex: _Optional[int] = ..., pic: _Optional[int] = ..., camp: _Optional[int] = ..., point: _Optional[int] = ..., giftToken: _Optional[int] = ..., state: _Optional[int] = ..., lastAward: _Optional[str] = ..., questSiteLen: _Optional[int] = ..., questSite: _Optional[bytes] = ..., consortiaId: _Optional[int] = ..., consortiaName: _Optional[str] = ..., claimId: _Optional[int] = ..., claimName: _Optional[str] = ..., grades: _Optional[int] = ..., gp: _Optional[int] = ..., repute: _Optional[int] = ..., consortiaOffer: _Optional[int] = ..., strategy: _Optional[int] = ..., weary: _Optional[int] = ..., attackLeftCount: _Optional[int] = ..., noviceProcess: _Optional[int] = ..., consortiaAttack: _Optional[int] = ..., consortiaDefence: _Optional[int] = ..., consortiaAgility: _Optional[int] = ..., consortiaAbility: _Optional[int] = ..., consortiaCaptain: _Optional[int] = ..., gpOrder: _Optional[int] = ..., fightingCapacity: _Optional[int] = ..., gradeProcess: _Optional[str] = ..., timeProcess: _Optional[int] = ..., timeGet: _Optional[bool] = ..., campaignSite: _Optional[str] = ..., bagCount: _Optional[int] = ..., matchWin: _Optional[int] = ..., matchFailed: _Optional[int] = ..., consortiaGold: _Optional[int] = ..., consortiaPhysique: _Optional[int] = ..., right: _Optional[int] = ..., job: _Optional[int] = ..., leedProcess: _Optional[int] = ..., starCount: _Optional[int] = ..., signDate: _Optional[str] = ..., signTimes: _Optional[int] = ..., signSite: _Optional[int] = ..., order: _Optional[_Union[PlayerOrderMsg, _Mapping]] = ..., startFree: _Optional[int] = ..., totalGp: _Optional[int] = ..., refuseFriend: _Optional[bool] = ..., refuseInvite: _Optional[bool] = ..., consortiaTotaloffer: _Optional[int] = ..., showVersion: _Optional[bool] = ..., campaignCount: _Optional[int] = ..., timeRun: _Optional[int] = ..., qteGuide: _Optional[int] = ..., starpoint: _Optional[int] = ..., isAuto: _Optional[bool] = ..., lastOutConsortia: _Optional[str] = ..., geste: _Optional[int] = ..., storeGrade: _Optional[int] = ..., storeGp: _Optional[int] = ..., reloginProcess: _Optional[int] = ..., reloginCount: _Optional[int] = ..., blessingCount: _Optional[int] = ..., blessingBuff: _Optional[int] = ..., blessingMaxCount: _Optional[int] = ..., firstCharge: _Optional[bool] = ..., charm: _Optional[int] = ..., matchRoomCount: _Optional[int] = ..., kingBuff: _Optional[bool] = ..., leaveGp: _Optional[int] = ..., altarConsortiaId: _Optional[int] = ..., serverName: _Optional[str] = ..., rewardTimes: _Optional[int] = ..., warFieldCount: _Optional[int] = ..., trialCount: _Optional[int] = ..., appellId: _Optional[int] = ..., crossScore: _Optional[int] = ..., trialMaxCount: _Optional[int] = ..., wearyLimit: _Optional[int] = ..., lordsScore: _Optional[int] = ..., isReceived: _Optional[bool] = ..., mineScore: _Optional[int] = ..., isBackPlayer: _Optional[bool] = ..., refuseTeamInvite: _Optional[bool] = ..., campaignMaxcount: _Optional[int] = ..., expLimit: _Optional[int] = ..., hasVicePassword: _Optional[int] = ..., isDuringToResetTime: _Optional[int] = ..., leadExtractTimes: _Optional[int] = ..., lastFreeSkillLearnTime: _Optional[str] = ..., rentalBagTime: _Optional[str] = ..., status: _Optional[int] = ...) -> None: ...
+    newPowerLv: int
+    newAgilityLv: int
+    newIntellectLv: int
+    newPhysiqueLv: int
+    famGpLv: int
+    medalLv: int
+    honorLv: int
+    propertyLv: int
+    leadExtractTimes: int
+    randomBossCount: int
+    monopolyCampaignCount: int
+    jumpNovice: bool
+    skills: str
+    skillGrade: str
+    skillProficiency: str
+    isCost: bool
+    skillComposeTimes: int
+    skillCollectTimes: int
+    composeId: str
+    teamCount: int
+    teamMaxCount: int
+    seekSurplusTime: int
+    recoverGP: int
+    terraTempleCount: int
+    terraTempleMaxCount: int
+    lastFreeSkillLearnTime: str
+    stoneBagCount: int
+    tramcarCount: int
+    weekCampaignCount: int
+    weekCampaignMaxCount: int
+    trialTowerCampaignCount: int
+    trialTowerCampaignMaxCount: int
+    fantasyMatrixCampaignCount: int
+    fantasyMatrixCampaignMaxCount: int
+    bloodyRealmCampaignCount: int
+    bloodyRealmCampaignMaxCount: int
+    equipmentRefiningGrade: int
+    equipmentRefiningGp: int
+    uuid: str
+    petPveCount: int
+    petPveMaxCount: int
+    quickPassCount: int
+    guardWarCount: int
+    guardWarMaxCount: int
+    timeVortexCount: int
+    timeVortexNode: int
+    isOpenDragonTalker: bool
+    isCurrentDragonTalker: bool
+    masterPowerLv: int
+    masterAgilityLv: int
+    masterIntellectLv: int
+    masterPhysiqueLv: int
+    abyssPrisonCount: int
+    abyssPrisonMaxCount: int
+    blackGoldCaveLeftCount: int
+    blackGoldCaveMaxCount: int
+    rushCustomsLeftCount: int
+    rushCustomsMaxCount: int
+    elementSilvaMaxCount: int
+    elementSilvaLeftCount: int
+    dungeonTurnLeftRewardCount: int
+    dungeonTurnMaxRewardCount: int
+    timeSpaceLeftRewardCount: int
+    timeSpaceMaxRewardCount: int
+    skyStepCount: int
+    skyStepMaxCount: int
+    runeCount: int
+    runePowerPoint: int
+    def __init__(self, playerId: _Optional[int] = ..., nickName: _Optional[str] = ..., sex: _Optional[int] = ..., pic: _Optional[int] = ..., camp: _Optional[int] = ..., point: _Optional[int] = ..., giftToken: _Optional[int] = ..., state: _Optional[int] = ..., lastAward: _Optional[str] = ..., questSiteLen: _Optional[int] = ..., questSite: _Optional[bytes] = ..., consortiaId: _Optional[int] = ..., consortiaName: _Optional[str] = ..., claimId: _Optional[int] = ..., claimName: _Optional[str] = ..., grades: _Optional[int] = ..., gp: _Optional[int] = ..., repute: _Optional[int] = ..., consortiaOffer: _Optional[int] = ..., strategy: _Optional[int] = ..., weary: _Optional[int] = ..., attackLeftCount: _Optional[int] = ..., noviceProcess: _Optional[int] = ..., consortiaAttack: _Optional[int] = ..., consortiaDefence: _Optional[int] = ..., consortiaAgility: _Optional[int] = ..., consortiaAbility: _Optional[int] = ..., consortiaCaptain: _Optional[int] = ..., gpOrder: _Optional[int] = ..., fightingCapacity: _Optional[int] = ..., gradeProcess: _Optional[str] = ..., timeProcess: _Optional[int] = ..., timeGet: _Optional[bool] = ..., campaignSite: _Optional[str] = ..., bagCount: _Optional[int] = ..., matchWin: _Optional[int] = ..., matchFailed: _Optional[int] = ..., consortiaGold: _Optional[int] = ..., consortiaPhysique: _Optional[int] = ..., right: _Optional[int] = ..., job: _Optional[int] = ..., leedProcess: _Optional[int] = ..., starCount: _Optional[int] = ..., signDate: _Optional[str] = ..., signTimes: _Optional[int] = ..., signSite: _Optional[int] = ..., order: _Optional[_Union[PlayerOrderMsg, _Mapping]] = ..., startFree: _Optional[int] = ..., totalGp: _Optional[int] = ..., refuseFriend: _Optional[bool] = ..., refuseInvite: _Optional[bool] = ..., consortiaTotaloffer: _Optional[int] = ..., showVersion: _Optional[bool] = ..., campaignCount: _Optional[int] = ..., timeRun: _Optional[int] = ..., qteGuide: _Optional[int] = ..., starpoint: _Optional[int] = ..., isAuto: _Optional[bool] = ..., lastOutConsortia: _Optional[str] = ..., geste: _Optional[int] = ..., storeGrade: _Optional[int] = ..., storeGp: _Optional[int] = ..., reloginProcess: _Optional[int] = ..., reloginCount: _Optional[int] = ..., blessingCount: _Optional[int] = ..., blessingBuff: _Optional[int] = ..., blessingMaxCount: _Optional[int] = ..., firstCharge: _Optional[bool] = ..., charm: _Optional[int] = ..., matchRoomCount: _Optional[int] = ..., kingBuff: _Optional[bool] = ..., leaveGp: _Optional[int] = ..., altarConsortiaId: _Optional[int] = ..., serverName: _Optional[str] = ..., rewardTimes: _Optional[int] = ..., warFieldCount: _Optional[int] = ..., trialCount: _Optional[int] = ..., appellId: _Optional[int] = ..., crossScore: _Optional[int] = ..., trialMaxCount: _Optional[int] = ..., wearyLimit: _Optional[int] = ..., lordsScore: _Optional[int] = ..., isReceived: _Optional[bool] = ..., mineScore: _Optional[int] = ..., isBackPlayer: _Optional[bool] = ..., refuseTeamInvite: _Optional[bool] = ..., campaignMaxcount: _Optional[int] = ..., seniorStoreGrade: _Optional[int] = ..., seniorStoreGp: _Optional[int] = ..., dragonCampaign_Count: _Optional[int] = ..., dragonCampaign_MaxCount: _Optional[int] = ..., crossGuildScore: _Optional[int] = ..., crossLeagueMedal: _Optional[int] = ..., applleProperty_Open: _Optional[bool] = ..., hasVicePassword: _Optional[int] = ..., isDuringToResetTime: _Optional[int] = ..., rentalBagTime: _Optional[str] = ..., status: _Optional[int] = ..., newPowerLv: _Optional[int] = ..., newAgilityLv: _Optional[int] = ..., newIntellectLv: _Optional[int] = ..., newPhysiqueLv: _Optional[int] = ..., famGpLv: _Optional[int] = ..., medalLv: _Optional[int] = ..., honorLv: _Optional[int] = ..., propertyLv: _Optional[int] = ..., leadExtractTimes: _Optional[int] = ..., randomBossCount: _Optional[int] = ..., monopolyCampaignCount: _Optional[int] = ..., jumpNovice: _Optional[bool] = ..., skills: _Optional[str] = ..., skillGrade: _Optional[str] = ..., skillProficiency: _Optional[str] = ..., isCost: _Optional[bool] = ..., skillComposeTimes: _Optional[int] = ..., skillCollectTimes: _Optional[int] = ..., composeId: _Optional[str] = ..., teamCount: _Optional[int] = ..., teamMaxCount: _Optional[int] = ..., seekSurplusTime: _Optional[int] = ..., recoverGP: _Optional[int] = ..., terraTempleCount: _Optional[int] = ..., terraTempleMaxCount: _Optional[int] = ..., lastFreeSkillLearnTime: _Optional[str] = ..., stoneBagCount: _Optional[int] = ..., tramcarCount: _Optional[int] = ..., weekCampaignCount: _Optional[int] = ..., weekCampaignMaxCount: _Optional[int] = ..., trialTowerCampaignCount: _Optional[int] = ..., trialTowerCampaignMaxCount: _Optional[int] = ..., fantasyMatrixCampaignCount: _Optional[int] = ..., fantasyMatrixCampaignMaxCount: _Optional[int] = ..., bloodyRealmCampaignCount: _Optional[int] = ..., bloodyRealmCampaignMaxCount: _Optional[int] = ..., equipmentRefiningGrade: _Optional[int] = ..., equipmentRefiningGp: _Optional[int] = ..., uuid: _Optional[str] = ..., petPveCount: _Optional[int] = ..., petPveMaxCount: _Optional[int] = ..., quickPassCount: _Optional[int] = ..., guardWarCount: _Optional[int] = ..., guardWarMaxCount: _Optional[int] = ..., timeVortexCount: _Optional[int] = ..., timeVortexNode: _Optional[int] = ..., isOpenDragonTalker: _Optional[bool] = ..., isCurrentDragonTalker: _Optional[bool] = ..., masterPowerLv: _Optional[int] = ..., masterAgilityLv: _Optional[int] = ..., masterIntellectLv: _Optional[int] = ..., masterPhysiqueLv: _Optional[int] = ..., abyssPrisonCount: _Optional[int] = ..., abyssPrisonMaxCount: _Optional[int] = ..., blackGoldCaveLeftCount: _Optional[int] = ..., blackGoldCaveMaxCount: _Optional[int] = ..., rushCustomsLeftCount: _Optional[int] = ..., rushCustomsMaxCount: _Optional[int] = ..., elementSilvaMaxCount: _Optional[int] = ..., elementSilvaLeftCount: _Optional[int] = ..., dungeonTurnLeftRewardCount: _Optional[int] = ..., dungeonTurnMaxRewardCount: _Optional[int] = ..., timeSpaceLeftRewardCount: _Optional[int] = ..., timeSpaceMaxRewardCount: _Optional[int] = ..., skyStepCount: _Optional[int] = ..., skyStepMaxCount: _Optional[int] = ..., runeCount: _Optional[int] = ..., runePowerPoint: _Optional[int] = ...) -> None: ...
 
 class PlayerMutualRspMsg(_message.Message):
     __slots__ = ("userId", "serverName", "type", "param")

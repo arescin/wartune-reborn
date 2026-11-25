@@ -118,7 +118,13 @@ def starting_quests(templates: GameTemplates) -> list[int]:
     só a 10 passa (a 187, a outra 23 sem pré-requisito, pede nível 15)."""
     ids = {int(c["TemplateId"]) for c in templates.find("QuestCondictionInfos", CondictionType=23)}
     rows = [(i, templates.get("QuestTemps", i)) for i in sorted(ids)]
-    return [i for i, row in rows if row is not None and not row.get("PreQuestId") and int(row["NeedMinLevel"]) <= 1]
+    res: list[int] = []
+    for i, row in rows:
+        if row is not None and not row.get("PreQuestId") and int(row["NeedMinLevel"]) <= 1:
+            conds = [int(c.get("Para1") or 0) for c in templates.find("QuestCondictionInfos", TemplateId=i, CondictionType=23)]
+            if any(p <= 11600 for p in conds):
+                res.append(i)
+    return res
 
 
 @dataclass(frozen=True, slots=True)

@@ -133,7 +133,7 @@ def _mine(snap: PlayerSnapshot, cfg: Mapping[str, Any], now: datetime) -> EventS
 
 
 def _drop_msg(cfg: Mapping[str, Any], now: datetime) -> pb.BottleDropListMsg:
-    msg = pb.BottleDropListMsg(open=is_open(cfg, now), endTime=int(_at(cfg, "endDate").timestamp() * 1000))
+    msg = pb.BottleDropListMsg(open=is_open(cfg, now), endTime=str(int(_at(cfg, "endDate").timestamp() * 1000)))
     for tid, n, show, new, *_w in cfg["drops"]:
         msg.dropItem.add(tempId=int(tid), count=int(n), isShow=bool(show), isNewItems=bool(new))
     for name, field_ in (("score", msg.score), ("storey", msg.storey)):
@@ -159,7 +159,55 @@ def _floors_msg(cfg: Mapping[str, Any], sh: Shared) -> pb.BottleMsg:
     return msg
 
 
+def _encode_varint(value: int) -> bytes:
+    bits = value & 0x7FFFFFFFFFFFFFFF
+    out = bytearray()
+    while True:
+        b = bits & 0x7F
+        bits >>= 7
+        if bits:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            break
+    return bytes(out)
+
+
+def _drop_msg_h5(cfg: Mapping[str, Any], now: datetime) -> bytes:
+    op = is_open(cfg, now)
+    end_ms = int(_at(cfg, "endDate").timestamp() * 1000)
+    start_ms = int(_at(cfg, "beginDate").timestamp() * 1000) if "beginDate" in cfg else 0
+    flash_msg = pb.BottleDropListMsg()
+    for tid, n, show, new, *_w in cfg["drops"]:
+        flash_msg.dropItem.add(tempId=int(tid), count=int(n), isShow=bool(show), isNewItems=bool(new))
+    for name, field_ in (("score", flash_msg.score), ("storey", flash_msg.storey)):
+        for param, tid, n in cfg[name]:
+            field_.add(param=int(param)).item.add(tempId=int(tid), count=int(n), isShow=True)
+    body = bytearray(flash_msg.SerializeToString())
+    # tag 4: open (bool, wireType 0 -> 32)
+    body.append((4 << 3) | 0)
+    body.append(1 if op else 0)
+    # tag 5: endTime (int64, wireType 0 -> 40)
+    body.append((5 << 3) | 0)
+    body.extend(_encode_varint(end_ms))
+    # tag 6: startTime (int64, wireType 0 -> 48)
+    body.append((6 << 3) | 0)
+    body.extend(_encode_varint(start_ms))
+    return bytes(body)
+
+
 def _send(s: GameSession, code: int, msg: Any) -> None:
+    if code == S_DROP and getattr(s, "is_h5", False):
+        from ...protocol.packet import Packet
+        if isinstance(msg, pb.BottleDropListMsg):
+            cfg = _cfg(s)
+            if cfg and msg.open:
+                now = s.ctx.clock.now()
+                body = _drop_msg_h5(cfg, now)
+            else:
+                body = bytes([(4 << 3) | 0, 0])
+            s.connection.send(Packet(S_DROP, body, s.player_id))
+            return
     s.send(code, b.complete(msg))
 
 

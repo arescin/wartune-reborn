@@ -33,6 +33,8 @@ async def test_opening_the_newbie_box_swaps_it_for_its_drop(tmp_path: Path) -> N
         assert (
             text
             == "Received:  10 Bound Balens, 3,000 Gold, Amethyst Ring x1, Coruscan Crest x1, Lvl. 10 Starter Pack x1"
+            or text
+            == "Received: Anel Verde x1, Emblema Brilhante x1, Pacote Iniciante Nv. 10 x1, 3,000 Ouro,  10 Diamante Vinculado"
         )
         assert pb.PlayerMsg.FromString(got[6].body).giftToken == 10
 

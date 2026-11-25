@@ -338,7 +338,13 @@ async def _login_state(s: GameSession) -> None:
     account.login_first(s)  # 4696 opType 6 logo antes do 4598
     _send(s, S_LOGIN_SYNC_MAPID, pb.SimplePropertyMsg(param1=10000))
     _send(s, S_ARMY, army(s, snap)[0])
-    _send(s, S_LOGIN_STATE, pb.LoginStateMsg(playerId=s.player_id, state=0))
+    # No cliente H5 (Laya): EH.CASTLE_SCENE = 2 (0 é INCASTLE que cai no tutorial novato).
+    # No Flash legado: state = 0.
+    state = 2 if getattr(s, "is_h5", False) else 0
+    _send(s, S_LOGIN_STATE, pb.LoginStateMsg(playerId=s.player_id, state=state))
+    from . import login_h5
+
+    login_h5.send_h5_system_open(s)
     # (visto) a cidade do céu logo depois do 6, antes do 4151, só depois do tutorial: oficial_20261023-171155-1
     # #92-#94 (noviceProcess 33000, exército no mapa 1); oficial_encantar #98-#99 (28500, exército na instância do
     # castelo) vai do 6 direto ao 4151, sem 4595 na sessão inteira

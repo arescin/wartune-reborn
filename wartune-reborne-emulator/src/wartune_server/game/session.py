@@ -44,7 +44,7 @@ S_ARMY = 150  # ArmyArmyMsg
 KICK_TIMEOUT = 5  # segundos para a sessão derrubada terminar o handler em andamento
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class GameContext:
     """Dependências compartilhadas por todas as sessões (montadas em ``app``)."""
 
@@ -71,6 +71,8 @@ class GameContext:
     pet_rage: dict[datetime, int] = field(default_factory=dict)
     states: ServerStates = field(default_factory=ServerStates)  # linhas de server_states (game/server_state.py)
     cross_queue: list[int] = field(default_factory=list)  # fila local do PvP entre servidores (handlers/cruzado.py)
+    settings: Any = None  # configurações gerais do servidor
+    database: Any = None  # Database para hot-reload de catálogo e consultas admin
 
 
 class OnlinePlayers:
@@ -191,6 +193,16 @@ class GameSession:
         assert self.snapshot is not None and self.snapshot.character.id is not None
         return self.snapshot.character.id
 
+    @property
+    def is_h5(self) -> bool:
+        conn = getattr(self, "connection", None)
+        if conn is not None:
+            return bool(
+                getattr(conn, "is_h5", False)
+                or type(getattr(conn, "transport", None)).__name__ == "WebSocketTransport"
+            )
+        return False
+
     def send(self, code: int, message: Message | None = None, *, extend2: int = 0, cards: bool = True) -> None:
         if code == S_ARMY and cards and self._own_army(message):
             # (só turco: teknoloji_upgrade, envanterden_item_kusanma, login...: 61 de 83) o 150 do próprio exército
@@ -202,6 +214,12 @@ class GameSession:
             slots = self.ctx.world.settings.get("powcard_suite_slots")
             if (add := fight_add_msg(self.snapshot, self.ctx.templates, slots)) is not None:
                 self.connection.send_message(S_FIGHT_ADD, add)
+        if self.is_h5 and message is not None and code in (3, 4247, 4912):
+            from .handlers.login_h5 import encode_h5_message
+
+            body = encode_h5_message(self, code, message)
+            self.connection.send(Packet(code, body, self.connection.client_id, extend2=extend2))
+            return
         self.connection.send_message(code, message, extend2=extend2)
 
     def _own_army(self, message: Message | None) -> bool:
@@ -211,7 +229,8 @@ class GameSession:
         return getattr(message, "playerId", None) == snap.character.id
 
     async def on_packet(self, packet: Packet) -> None:
-        if self.snapshot is None and packet.code != LOGIN_CODE:
+        PRE_LOGIN_CODES = (LOGIN_CODE, 28678, 28672, 28674, 28676, 28680)
+        if self.snapshot is None and packet.code not in PRE_LOGIN_CODES:
             self.log.warning("pacote antes do login; ignorado", code=packet.code)
             return
         handler = self.ctx.router.get(packet.code)
