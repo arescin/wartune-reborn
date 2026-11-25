@@ -19,6 +19,8 @@ logs/
 .ruff_cache/
 data/*
 !data/*.json
+!data/templates/
+!data/templates/*
 captures/
 .claude/
 
