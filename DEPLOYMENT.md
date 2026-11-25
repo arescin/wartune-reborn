@@ -103,7 +103,35 @@ WARTUNE_GM_USERS=admin
 
 ---
 
-## 6. IMPLANTAÇÃO PASSO A PASSO NO EASYPANEL
+## 6. INSTÂNCIA ATIVA NA VPS HOSTINGER (EASYPANEL)
+
+A implantação em produção foi concluída e validada na VPS Hostinger com EasyPanel:
+
+* **VPS IP:** `179.198.96.49`
+* **Domínio EasyPanel:** `thnsdu.easypanel.host`
+* **Projeto EasyPanel:** `bots`
+* **Serviço Principal:** `wartune-server` (Container ativo consumindo ~453 MB RAM, Python 3.12 asyncio)
+* **URL do Portal / Web Player:** `https://wartune-server.thnsdu.easypanel.host/`
+* **Página de Jogo (Web Ruffle):** `https://wartune-server.thnsdu.easypanel.host/play?user=NOME_DO_JOGADOR`
+* **Link Direto Flash Projector (Desktop):** `https://wartune-server.thnsdu.easypanel.host/projector?user=NOME_DO_JOGADOR`
+* **Configuração do Cliente (`config.xml`):** `https://wartune-server.thnsdu.easypanel.host/config.xml`
+* **Socket TCP Principal (Flash):** `179.198.96.49:5000` (Porta direta do host aberta e validada)
+* **Ponte WebSocket (WSS):** `wss://wartune-server.thnsdu.easypanel.host/ws` (compatível com navegadores modernos)
+* **Assets CDN (SWFs / XMLs / Imagens):** `https://wartune-server.thnsdu.easypanel.host/cdn/...`
+
+### Evidência de Homologação Ponta a Ponta (`test_live_vps.py`)
+
+O script de integração de ponta a ponta executou com 100% de sucesso contra a infraestrutura ativa na VPS Hostinger:
+1. Extração da chave pública RSA do `config.xml` dinâmico.
+2. Emissão de ticket de acesso via `/api/auth`.
+3. Criptografia RSA do ticket e aprovação do login HTTP (`/login`).
+4. Ativação do herói via `/visualizeregister`.
+5. Conexão TCP ao socket `179.198.96.49:5000`.
+6. Envio de pacote 20001, recebimento de `PlayerMsg` (opcode 3) e confirmação de entrada no mapa com `LoginStateMsg` (opcode 6, state 0).
+
+---
+
+## 7. IMPLANTAÇÃO PASSO A PASSO NO EASYPANEL
 
 ### Método 1: Via Docker Compose (Recomendado)
 

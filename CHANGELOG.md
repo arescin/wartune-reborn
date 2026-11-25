@@ -14,14 +14,19 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
   - `docker-compose.prod.yml`: Orquestração voltada para produção e implantação no EasyPanel.
   - `.env.example`: Modelo centralizado e documentado de variáveis de ambiente.
 - **Teste de Integração Real Ponta a Ponta:**
-  - `wartune-reborne-emulator/test_full_chain.py`: Validação real cobrindo:
-    1. Abertura do banco e verificação de tabelas;
-    2. Cadastro e emissão de ticket no formato do Portal PHP;
-    3. Inicialização dos serviços HTTP e TCP do emulador;
-    4. Criptografia RSA do ticket e requisição HTTP `/login`;
-    5. Ativação de personagem via HTTP `/visualizeregister` (respeitando limites de nickname);
-    6. Handshake TCP 20001 com chave de sessão;
-    7. Recebimento de `PlayerMsg` (opcode 3) e `LoginStateMsg` (opcode 6, state 0), autorizando a entrada no mundo.
+  - `wartune-reborne-emulator/test_full_chain.py`: Validação real local cobrindo banco, emissão de tickets, login RSA, ativação de herói e handshake TCP 20001 com entrada no mapa.
+  - `wartune-reborne-emulator/test_live_vps.py`: Script de homologação em tempo real executado contra a VPS Hostinger (`179.198.96.49:5000` e `https://wartune-server.thnsdu.easypanel.host`), validando com 100% de sucesso:
+    1. Obtenção do `config.xml` dinâmico e extração da chave pública RSA.
+    2. Criação de conta e emissão de ticket via `POST /api/auth`.
+    3. Criptografia RSA PKCS1v15 do ticket e login HTTP (`POST /login`).
+    4. Ativação do personagem via `POST /visualizeregister` e avanço do tutorial (`noviceProcess`) via `/updateplayernovice`.
+    5. Estabelecimento do socket TCP com `179.198.96.49:5000`.
+    6. Envio do pacote 20001 (Handshake) com StreamCipher, recebimento de `PlayerMsg` (opcode 3), envio de `PlayerDataMsg` (opcode 8224) e confirmação de entrada no mapa com `LoginStateMsg` (opcode 6, state 0).
+- **Implantação na VPS Hostinger / EasyPanel:**
+  - Configurado o serviço `wartune-server` no projeto `bots` no EasyPanel em `thnsdu.easypanel.host`.
+  - Mapeadas as portas públicas 5000 (TCP direto Flash) e 5001 (WebSocket bridge).
+  - Configurado roteamento HTTPS Traefik para o domínio `wartune-server.thnsdu.easypanel.host`.
+  - Validado carregamento do cliente web Ruffle e do Flash Projector Standalone Desktop.
 - **Documentação de Implantação e Operação:**
   - `DEPLOYMENT.md`: Guia de arquitetura, portas públicas, volumes persistentes, configuração passo a passo no EasyPanel, rotinas de backup/restore e diagnóstico.
   - `README.md`: Visão geral do ecossistema, fluxo de inicialização e instruções de uso.

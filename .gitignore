@@ -46,3 +46,9 @@ har/
 *.bak
 *.dump
 *.sql.gz
+
+# Backups de repositórios git internos
+**/.git_portal_backup/
+
+# Temporários de automação e testes
+.playwright-mcp/

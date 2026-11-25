@@ -24,7 +24,21 @@ O projeto é organizado em três componentes integrados:
 
 ---
 
-## 2. REQUISITOS DE SISTEMA
+## 2. INSTÂNCIA ONLINE EM PRODUÇÃO (VPS HOSTINGER)
+
+O servidor de produção já se encontra ativo, integrado e homologado:
+
+* **Portal & Web Player:** [https://wartune-server.thnsdu.easypanel.host/](https://wartune-server.thnsdu.easypanel.host/)
+* **Jogar no Navegador (Web Ruffle):** `https://wartune-server.thnsdu.easypanel.host/play?user=SEU_NICK`
+* **Jogar via Adobe Flash Projector (Desktop):** `https://wartune-server.thnsdu.easypanel.host/projector?user=SEU_NICK`
+* **Configuração Dinâmica do Cliente:** `https://wartune-server.thnsdu.easypanel.host/config.xml`
+* **Socket TCP Direto:** `179.198.96.49:5000`
+* **Ponte WebSocket (WSS):** `wss://wartune-server.thnsdu.easypanel.host/ws`
+* **Proxy de Assets CDN:** `https://wartune-server.thnsdu.easypanel.host/cdn/`
+
+---
+
+## 3. REQUISITOS DE SISTEMA
 
 ### Ambiente Local (Desenvolvimento)
 - **Python:** 3.12 ou 3.13 com as dependências listadas em `wartune-reborne-emulator/pyproject.toml`.
