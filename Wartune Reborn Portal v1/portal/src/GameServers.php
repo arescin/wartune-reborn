@@ -56,7 +56,7 @@ final class GameServers
     public function charactersOf(int $accountId): array
     {
         $rows = $this->db->all(
-            'SELECT server_id, nickname, grades FROM characters WHERE account_id = ? AND active = 1',
+            'SELECT server_id, nickname, grades FROM characters WHERE account_id = ? AND active = TRUE',
             [$accountId]
         );
         return array_column($rows, null, 'server_id');
