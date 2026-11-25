@@ -20,6 +20,9 @@ COPY docker/portal/apache.conf /etc/apache2/sites-available/000-default.conf
 # Copiar arquivos da aplicação
 COPY ["Wartune Reborn Portal v1/", "/var/www/html/"]
 
+# Criar links na raiz para que rotas requisitadas na raiz (ex: client-config.php) funcionem perfeitamente
+RUN cd /var/www/html && ln -sfn portal/* .
+
 # Ajustar permissões para o www-data
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
