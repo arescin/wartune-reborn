@@ -44,6 +44,11 @@ final class GameServers
 
     public static function requestUrl(array $server): string
     {
+        $base = getenv('WARTUNE_SERVER_HTTP_URL') ?: '';
+        if ($base !== '') {
+            return rtrim($base, '/') . '/';
+        }
+
         return sprintf('http://%s:%d/', $server['public_host'], $server['http_port']);
     }
 

@@ -9,6 +9,7 @@ $dbPass = getenv('WARTUNE_DB_PASS') ?: getenv('DB_PASSWORD') ?: null;
 $portalUrl = getenv('WARTUNE_PORTAL_URL') ?: getenv('PORTAL_URL') ?: 'http://127.0.0.1:8090/wartune-reborn/portal/';
 $cdnUrl = getenv('WARTUNE_CDN_URL') ?: getenv('CDN_URL') ?: 'http://127.0.0.1:8090/wartune-reborn/cdn/';
 $gameUrl = getenv('WARTUNE_GAME_URL') ?: getenv('GAME_URL') ?: 'http://127.0.0.1:8090/wartune-reborn/game/';
+$serverHttpUrl = getenv('WARTUNE_SERVER_HTTP_URL') ?: '';
 
 $ticketTtl = (int) (getenv('WARTUNE_TICKET_TTL') ?: 300);
 $gmSecret = getenv('WARTUNE_GM_SECRET') ?: '';
@@ -31,6 +32,7 @@ return [
     'cdn_url' => rtrim($cdnUrl, '/') . '/',
     // Site do servidor de jogo (o s134 oficial): client/Loading.swf, client/resouececheck.sq e xml/tempinfos.xml
     'game_url' => rtrim($gameUrl, '/') . '/',
+    'server_http_url' => rtrim($serverHttpUrl, '/'),
 
     // Validade do ticket de entrada (segundos): o Loading.swf precisa fazer o login HTTP nesse prazo
     'ticket_ttl' => $ticketTtl,

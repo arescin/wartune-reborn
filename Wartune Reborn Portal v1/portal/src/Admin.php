@@ -105,7 +105,10 @@ final class Admin
     /** Marca a conta e avisa cada servidor (derruba e invalida as chaves de login). Devolve avisos. */
     public function ban(int $accountId, bool $banned): array
     {
-        $this->db->run('UPDATE accounts SET banned = ? WHERE id = ?', [$banned ? 1 : 0, $accountId]);
+        $this->db->run(
+            'UPDATE accounts SET banned = CASE WHEN CAST(? AS INTEGER) = 1 THEN TRUE ELSE FALSE END WHERE id = ?',
+            [$banned ? 1 : 0, $accountId]
+        );
         $warnings = [];
         foreach ($this->db->all('SELECT * FROM game_servers ORDER BY id') as $server) {
             $error = $this->call($server, 'gm/ban', ['account_id' => $accountId, 'banned' => $banned ? 1 : 0]);

@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import (
     Boolean,
     Column,
+    text,
     DateTime,
     Dialect,
     Float,
@@ -133,7 +134,7 @@ accounts = Table(
     Column("password_hash", String(255), nullable=False),
     Column("created_at", UTCDateTime, nullable=False),
     Column("last_login_at", UTCDateTime),
-    Column("banned", Boolean, nullable=False, default=False, server_default="0"),
+    Column("banned", Boolean, nullable=False, default=False, server_default=text("FALSE")),
 )
 
 play_tickets = Table(

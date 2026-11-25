@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools && \
 # Copiar código-fonte, dados e ferramentas
 COPY src/ ./src/
 COPY data/ ./data/
+COPY data/templates/ ./image-data/templates/
 COPY tools/ ./tools/
 COPY proto/ ./proto/
 COPY docker/server/entrypoint.sh /entrypoint.sh

@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools && \
 # Copiar código-fonte, dados e ferramentas
 COPY src/ ./src/
 COPY data/ ./data/
+COPY data/templates/ ./image-data/templates/
 COPY tools/ ./tools/
 COPY proto/ ./proto/
 COPY entrypoint.sh /entrypoint.sh
@@ -41,11 +42,11 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Portas:
-# 8082 = HTTP (REQUEST_PATH) — evita conflito com outros serviços na VPS
+# 8080 = HTTP (REQUEST_PATH)
 # 5000 = Game TCP Socket
 # 5001 = WebSocket (Ruffle proxy)
 # 843 = Flash Policy Server
-EXPOSE 8082 5000 5001 843
+EXPOSE 8080 5000 5001 843
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run"]

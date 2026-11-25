@@ -27,7 +27,7 @@ final class Accounts
             throw new AccountError('Esse usuário já existe.');
         }
         $this->db->run(
-            'INSERT INTO accounts (username, password_hash, created_at, banned) VALUES (?, ?, ?, 0)',
+            'INSERT INTO accounts (username, password_hash, created_at, banned) VALUES (?, ?, ?, FALSE)',
             [$username, password_hash($password, PASSWORD_DEFAULT), Database::now()]
         );
         return $this->authenticate($username, $password);

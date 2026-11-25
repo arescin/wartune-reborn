@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column("created_at", wartune_server.persistence.schema.UTCDateTime(timezone=True), nullable=False),
         sa.Column("last_login_at", wartune_server.persistence.schema.UTCDateTime(timezone=True), nullable=True),
-        sa.Column("banned", sa.Boolean(), server_default="0", nullable=False),
+        sa.Column("banned", sa.Boolean(), server_default=sa.text("FALSE"), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_accounts")),
         sa.UniqueConstraint("username", name=op.f("uq_accounts_username")),
     )

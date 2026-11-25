@@ -3,8 +3,11 @@ set -e
 
 echo "[Wartune-Server] Iniciando inicialização do servidor de jogo..."
 
-# Garantir diretórios necessários
+# Garantir diretórios necessários sem perder templates incluídos na imagem
 mkdir -p /app/data/templates /app/logs
+if [ ! -f /app/data/templates/tempinfos.xml ] && [ -f /app/image-data/templates/tempinfos.xml ]; then
+    cp /app/image-data/templates/tempinfos.xml /app/data/templates/tempinfos.xml
+fi
 
 # Se o banco configurado for PostgreSQL ou MySQL, aguardar a porta estar disponível
 if [[ "${WARTUNE_DATABASE_URL}" == *"postgresql"* ]] || [[ "${WARTUNE_DATABASE_URL}" == *"postgres"* ]]; then

@@ -56,7 +56,7 @@ function current_account(): ?array
     if ($account === null) {
         return null;
     }
-    $row = db()->one('SELECT id, username FROM accounts WHERE id = ? AND banned = 0', [$account['id']]);
+    $row = db()->one('SELECT id, username FROM accounts WHERE id = ? AND banned = FALSE', [$account['id']]);
     if (!$row || $row['username'] !== $account['username']) {
         unset($_SESSION['account']);
         return null;
