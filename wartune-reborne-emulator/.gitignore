@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Runtime
+*.db
+*.db-journal
+logs/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+data/*
+!data/*.json
+captures/
+.claude/
+
+# Material de consulta (relatórios de revisão, legado turco)
+consulta/

@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # BANCO DE DADOS (PostgreSQL 16)
+  # -------------------------------------------------------------
+  wartune-db:
+    image: postgres:16-alpine
+    container_name: wartune-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wartune}
+      POSTGRES_USER: ${POSTGRES_USER:-wartune}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wartune_secret_pass}
+    volumes:
+      - wartune_db_data:/var/lib/postgresql/data
+    networks:
+      - wartune-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wartune} -d ${POSTGRES_DB:-wartune}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # SERVIDOR DO JOGO (Python 3.12 / asyncio)
+  # -------------------------------------------------------------
+  wartune-server:
+    build:
+      context: ./wartune-reborne-emulator
+      dockerfile: ../docker/server/Dockerfile
+    container_name: wartune-server
+    restart: unless-stopped
+    depends_on:
+      wartune-db:
+        condition: service_healthy
+    environment:
+      WARTUNE_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-wartune}:${POSTGRES_PASSWORD:-wartune_secret_pass}@wartune-db:5432/${POSTGRES_DB:-wartune}
+      WARTUNE_SERVER_ID: ${WARTUNE_SERVER_ID:-1}
+      WARTUNE_SERVER_NAME: ${WARTUNE_SERVER_NAME:-S1 - Wartune Reborn}
+      WARTUNE_SITE: ${WARTUNE_SITE:-local_0001}
+      WARTUNE_BIND_HOST: 0.0.0.0
+      WARTUNE_PUBLIC_HOST: ${WARTUNE_PUBLIC_HOST:-127.0.0.1}
+      WARTUNE_HTTP_PORT: 8080
+      WARTUNE_SOCKET_PORT: 5000
+      WARTUNE_WEBSOCKET_PORT: 5001
+      WARTUNE_POLICY_PORT: 843
+      WARTUNE_GAME_TIMEZONE: ${WARTUNE_GAME_TIMEZONE:-UTC}
+      WARTUNE_SKIP_TUTORIAL: ${WARTUNE_SKIP_TUTORIAL:-false}
+      WARTUNE_GM_SECRET: ${WARTUNE_GM_SECRET:-secret_gm_token_2026}
+      WARTUNE_SITE_URL: ${WARTUNE_GAME_URL:-http://127.0.0.1:8081/game/}
+      WARTUNE_LOG_LEVEL: INFO
+      WARTUNE_LOG_PACKETS: "true"
+    ports:
+      - "8080:8080"  # HTTP REQUEST_PATH
+      - "5000:5000"  # TCP Socket do Jogo
+      - "5001:5001"  # WebSocket Proxy (Ruffle)
+      - "843:843"    # Flash Socket Policy
+    volumes:
+      - wartune_server_data:/app/data
+      - wartune_server_logs:/app/logs
+    networks:
+      - wartune-net
+
+  # -------------------------------------------------------------
+  # PORTAL WEB (PHP 8.2 / Apache)
+  # -------------------------------------------------------------
+  wartune-portal:
+    build:
+      context: .
+      dockerfile: docker/portal/Dockerfile
+    container_name: wartune-portal
+    restart: unless-stopped
+    depends_on:
+      wartune-db:
+        condition: service_healthy
+    environment:
+      WARTUNE_DB_DSN: pgsql:host=wartune-db;port=5432;dbname=${POSTGRES_DB:-wartune}
+      WARTUNE_DB_USER: ${POSTGRES_USER:-wartune}
+      WARTUNE_DB_PASS: ${POSTGRES_PASSWORD:-wartune_secret_pass}
+      WARTUNE_PORTAL_URL: ${WARTUNE_PORTAL_URL:-http://127.0.0.1:8090/portal/}
+      WARTUNE_CDN_URL: ${WARTUNE_CDN_URL:-http://127.0.0.1:8081/cdn/}
+      WARTUNE_GAME_URL: ${WARTUNE_GAME_URL:-http://127.0.0.1:8081/game/}
+      WARTUNE_TICKET_TTL: 300
+      WARTUNE_GM_SECRET: ${WARTUNE_GM_SECRET:-secret_gm_token_2026}
+      WARTUNE_GM_USERS: "admin"
+      WARTUNE_SITE_NAME: "Wartune Reborn"
+    ports:
+      - "8090:80"
+    networks:
+      - wartune-net
+
+  # -------------------------------------------------------------
+  # CDN & GAME ASSETS (Nginx)
+  # -------------------------------------------------------------
+  wartune-cdn:
+    build:
+      context: .
+      dockerfile: docker/cdn/Dockerfile
+    container_name: wartune-cdn
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./CDN/res134-bmclas-sq.7road.net:/usr/share/nginx/html/res134-bmclas-sq.7road.net:ro
+      - ./CDN/s134-bmclas-sq.7road.net:/usr/share/nginx/html/s134-bmclas-sq.7road.net:ro
+    networks:
+      - wartune-net
+
+networks:
+  wartune-net:
+    driver: bridge
+
+volumes:
+  wartune_db_data:
+  wartune_server_data:
+  wartune_server_logs:

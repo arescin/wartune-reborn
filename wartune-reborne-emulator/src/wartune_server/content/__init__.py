@@ -1,0 +1,36 @@
+"""Conteúdo de jogo que não está no ``tempinfos.xml`` (era do banco do servidor oficial).
+
+As masmorras e a pedreira estão no banco (``campaign_contents``, migração 0034). O tutorial e a ilha dos pets
+ficam aqui: ``CampaignMap.enter`` e o 127 da ilha os leem sem sessão de banco, e os testes do tutorial também;
+levá-los ao banco é mudar esse caminho todo (docs/salas-campanha.md).
+"""
+
+from __future__ import annotations
+
+import json
+from functools import cache
+from importlib import resources
+from typing import Any
+
+
+@cache
+def tutorial() -> dict[str, Any]:
+    """Nós, batalhas e diálogos da campanha de treino (``tools/extract_tutorial.py``). As lutas são roteirizadas
+    (``undying``): o lado do jogador não morre (visto: tutorial_en #144-#540, nenhuma unidade dele a 0)."""
+    text = resources.files(__package__).joinpath("tutorial.json").read_text(encoding="utf-8")
+    data: dict[str, Any] = json.loads(text)
+    for spec in data["battles"].values():
+        spec["undying"] = True
+    return data
+
+
+@cache
+def pet_island() -> dict[str, Any]:
+    """Nós da ilha dos pets (mapa 20001) como o oficial mandou no 127 (só turco: ``captures/peri_adasi_tp.json`` #8;
+    a captura inglesa não passou pela ilha).
+
+    Textos em inglês: tempinfos (heróis 75102/20010/5101, MapNodeInfo 4 do Alice, item 2100028) e language.txt
+    (PetBossInfoView.monsterText0/1, PetExchangeShopFrame.title, Mystic's Gate, Sylph Atoll); texto deduzido (sem
+    fonte no cliente/captura): o "I"/"Floor 2" dos nomes, "Leave" e o diálogo do The Stranger."""
+    text = resources.files(__package__).joinpath("petisland.json").read_text(encoding="utf-8")
+    return json.loads(text)  # type: ignore[no-any-return]

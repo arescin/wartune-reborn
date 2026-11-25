@@ -1,0 +1,338 @@
+"""Chat entre jogadores: mundo (8198), cena (15005/25024/25096), cornetas (5011, 8623), convite rápido da sala
+(8353), privado (15023) e quem mandou (15038).
+
+Remetente e nome saem sempre do snapshot do servidor; o texto perde as tags HTML para ninguém
+forjar link de jogador ou item. Quem pôs o remetente na lista negra não recebe. Regras do
+cliente em docs/chat.md.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import timedelta
+from xml.sax.saxutils import quoteattr
+
+from ...domain import gameday
+from ...domain.models import Item
+from ...protocol.messages import wartune_pb2 as pb
+from .. import events as ev
+from .. import guild, items, rooms, social
+from ..builders import login as b
+from ..router import router
+from ..session import GameSession
+
+S_CHAT, S_PRIVATE, S_PRIVATE_REPLY, S_USER_INFO = 83, 4231, 4236, 4256
+S_ITEMS, S_FREE_BUGLES, S_CROSS_BUGLE = 115, 4500, 4541
+BIG_BUGLE, GUILD, TEAM, CURRENT, WORLD, CROSS = 1, 5, 6, 8, 10, 13
+MIN_GRADE, MAX_LEN = 6, 100  # ChatHelper / ChatInputViewII (cliente inglês: maxChars 100, checkLength)
+BUGLE = timedelta(seconds=2)
+# ponytail: o cliente não limita a guilda (ChatHelper); 1 s contra spam
+COOLDOWN = {
+    GUILD: timedelta(seconds=1),
+    TEAM: timedelta(seconds=1),
+    CURRENT: timedelta(seconds=10),
+    WORLD: BUGLE,
+    BIG_BUGLE: BUGLE,
+    CROSS: BUGLE,
+}
+PRIVATE_COOLDOWN = timedelta(seconds=1)  # IMFrame: 1 s entre mensagens (friends.im.IMFrame.command03)
+OFFLINE = -1  # 4236.result: "o jogador não está online"
+SMALL_BUGLE, BIG_BUGLE_ITEM, CROSS_BUGLE_ITEM = 208003, 208002, 208025  # ShopGoodsInfo.*_BUGLE_TEMP_ID
+ROOM_LINK = 4  # ChatChannelMsg.type: ChatFormat.createRoomCellData lê cada <tag> da mensagem como link de sala
+INVITE_ROOM, INVITE_WEDDING = 0, 1  # CaptainSpeakMsg.type: 0 sala, 1 casamento (QuickInviteFrame.getSendType)
+S_ALERT = 111
+_TAG = re.compile(r"<[^>]*>")
+
+
+def _text(s: GameSession, raw: str, key: int, cooldown: timedelta) -> str | None:
+    """Texto limpo se o jogador pode falar agora (``key`` = canal ou -destinatário); marca o envio."""
+    assert s.snapshot is not None
+    text = _TAG.sub("", raw).strip()
+    now = s.ctx.clock.now()
+    last = s.chat_at.get(key)
+    if not text or len(text) > MAX_LEN or s.snapshot.character.grades < MIN_GRADE:
+        return None
+    if last is not None and now - last < cooldown:
+        return None
+    s.chat_at[key] = now
+    return text
+
+
+def _broadcast(s: GameSession, code: int, msg: pb.ChatChannelMsg | pb.CrossBigBugleMsg) -> None:
+    # o cliente não mostra a própria mensagem ao enviar: quem falou também recebe
+    for other in s.ctx.online.sessions():
+        if not social.blocks(other, s.player_id):
+            other.send(code, msg)
+
+
+def _channel_msg(s: GameSession, channel: int, text: str) -> pb.ChatChannelMsg:
+    assert s.snapshot is not None
+    c = s.snapshot.character
+    out = pb.ChatChannelMsg(channel=channel, encodeMsg=text, otherId=c.id, name=c.nickname or "")
+    mine = s.ctx.guilds.of(s.player_id)
+    if mine is not None:
+        out.consortiaId, out.consortiaName = mine[0].id or 0, mine[0].name
+    return b.complete(out)
+
+
+async def _say(s: GameSession, msg: pb.ChatChannelMsg, channel: int) -> None:
+    text = _text(s, msg.encodeMsg, channel, COOLDOWN[channel])
+    if text is None:
+        s.log.info("chat recusado", canal=channel, tamanho=len(msg.encodeMsg))
+        return
+    out = _channel_msg(s, channel, text)
+    if channel == GUILD:  # só os membros online da guilda (quem falou também)
+        mine = s.ctx.guilds.of(s.player_id)
+        targets = guild.online_members(s.ctx, mine[0].id or 0) if mine is not None else []
+    elif channel == TEAM:
+        targets = team_members(s)
+    else:
+        key = scene_key(s)
+        targets = [o for o in s.ctx.online.sessions() if scene_key(o) == key]
+    for o in targets:
+        if not social.blocks(o, s.player_id):
+            o.send(S_CHAT, out)
+
+
+def team_members(s: GameSession) -> list[GameSession]:
+    """Canal 6: o time livre (``FreedomTeam``) ou, sem time, a sala (``ChatHelper.checkTeamChatScene``); online."""
+    group = s.ctx.teams.of(s.player_id) or s.ctx.rooms.of(s.player_id)
+    ids = group.members if group is not None else [s.player_id]  # sem grupo (veículo): só o eco
+    return [o for i in ids if (o := s.ctx.online.get(i)) is not None]
+
+
+def scene_key(s: GameSession) -> tuple[object, ...]:
+    """Quem está na mesma cena: mapa compartilhado (chefe, terra secreta da guilda, guerra, campo, gancho), o mapa da
+    sala, a cidade do céu ou, fora de mapa, a cidade. Mapa sem sala nem compartilhamento é só do jogador.
+    TODO(inventado): a cidade (castelo) como uma cena só; o cliente deixa falar nela (``checkSceneType``)."""
+    c = s.campaign
+    if c is not None:
+        mine = s.ctx.guilds.of(s.player_id)
+        guild_id = (mine[0].id or 0) if mine is not None else -s.player_id
+        if c.fam or c.altar:  # um mapa por guilda
+            return ("map", c.map_id, guild_id)
+        if c.gvg:  # as duas guildas do par (``guildwar.players_on``)
+            return ("map", c.map_id, id(s.ctx.guilds.wars.get(guild_id)))
+        if c.wedding:  # o salão de uma sala de casamento
+            return ("map", c.map_id, c.wedding)
+        if c.world_boss or c.is_warfield or c.hook:
+            return ("map", c.map_id)
+        room = s.ctx.rooms.of(s.player_id)
+        return ("map", c.map_id, ("sala", room.id) if room is not None else -s.player_id)
+    return ("céu",) if s.space_pos is not None else ("cidade",)
+
+
+def free_bugles(s: GameSession) -> int:
+    """Cornetas pequenas grátis que restam hoje (o contador zera na virada do dia do servidor).
+
+    Cota do ConfigInfo ``SMALL_BUGLE_FREE_COUNT`` (10, #2780) + ``vip_bugle_bonus[nível VIP]`` (``game_settings``,
+    migração 0036): nem o cliente nem a captura dizem se o VIP ganha mais, então o padrão é 0 (sem efeito).
+    """
+    from .vip import is_vip, vip_grade  # vip importa player, que importa este pacote
+
+    snap = s.snapshot
+    assert snap is not None
+    c, now = snap.character, s.ctx.clock.now()
+    today = gameday.today(now)
+    if c.bugle_free_day != today:
+        c.bugle_free_day, c.bugle_free_used = today, 0
+    quota = int(ev.config(s.ctx.templates, "SMALL_BUGLE_FREE_COUNT", "0"))
+    bonus = list(s.ctx.world.settings.get("vip_bugle_bonus") or [])
+    if is_vip(snap, now) and 0 <= (grade := vip_grade(s, snap)) < len(bonus):
+        quota += int(bonus[grade])
+    return max(0, quota - c.bugle_free_used)
+
+
+async def _pay_bugle(s: GameSession, template_id: int, *, free: bool = False, notify: bool = True) -> bool:
+    """Gasta uma corneta (grátis primeiro, se ``free``) antes de qualquer await; grava e avisa (4500 da cota grátis
+    só com ``notify``)."""
+    snap = s.snapshot
+    assert snap is not None
+    c = snap.character
+    if free and free_bugles(s) > 0:
+        c.bugle_free_used += 1
+        await s.ctx.characters.save(c)
+        if notify:
+            s.send(S_FREE_BUGLES, pb.CampaignReqMsg(paraInt1=free_bugles(s)))
+        return True
+    item: Item | None = items.bag_item(snap, template_id=template_id)
+    if item is None:
+        return False
+    gone = items.take_one(snap, item)
+    await s.ctx.characters.save(*([] if gone else [item]), delete=(gone,) if gone else ())
+    s.send(S_ITEMS, items.item_update(item, s.player_id))
+    return True
+
+
+@router.on(8198)
+async def world_chat(s: GameSession, msg: pb.ChatChannelMsg) -> None:
+    """Canal mundo (corneta pequena): nível mínimo ``world_chat_min_grade`` (banco), cota grátis do dia e depois o
+    item 208003. Abaixo do nível: 111 "Requires character Level of 20" (tutorial_en #2781-#2782, nível 14)."""
+    assert s.snapshot is not None
+    need = int(s.ctx.world.settings.get("world_chat_min_grade", MIN_GRADE))
+    if s.snapshot.character.grades < need:  # antes de marcar o intervalo e de gastar corneta
+        s.send(S_ALERT, pb.ChatChannelMsg(channel=7, encodeMsg=f"Requires character Level of {need}"))
+        return
+    text = _text(s, msg.encodeMsg, WORLD, COOLDOWN[WORLD])
+    if text is None or not await _pay_bugle(s, SMALL_BUGLE, free=True):
+        s.log.info("corneta pequena recusada", tamanho=len(msg.encodeMsg))
+        return
+    from . import events  # events importa login, que importa este pacote
+
+    # (visto) 20261031-183522 #6496-#6499: 4152 (leed 16), o 83 do canal 10 e o 83 da devoção
+    devotion = events.devotion(s)
+    await events.leed_done(s, events.WORLD_CHAT_LEED, say=False)
+    _broadcast(s, S_CHAT, _channel_msg(s, WORLD, text))
+    if events.devotion(s) > devotion:
+        events.say_devotion(s)
+
+
+@router.on(8705)
+async def free_bugle_count(s: GameSession, _: object) -> None:
+    s.send(S_FREE_BUGLES, pb.CampaignReqMsg(paraInt1=free_bugles(s)))
+
+
+@router.on(5011)
+async def big_bugle(s: GameSession, msg: pb.ChatChannelMsg) -> None:
+    """Corneta grande (item 208002), canal 1: vai para a faixa de cornetas de todos."""
+    text = _text(s, msg.encodeMsg, BIG_BUGLE, COOLDOWN[BIG_BUGLE])
+    if text is None or not await _pay_bugle(s, BIG_BUGLE_ITEM):
+        s.log.info("corneta grande recusada", tamanho=len(msg.encodeMsg))
+        return
+    _broadcast(s, S_CHAT, _channel_msg(s, BIG_BUGLE, text))
+
+
+@router.on(8623)
+async def cross_bugle(s: GameSession, msg: pb.CrossBigBugleMsg) -> None:
+    """Corneta entre servidores (item 208025) -> 4541 a todos os online: o servidor é um processo só (todos os
+    "servidores" do jogador estão aqui), então todo mundo que pode ouvir está em ``ctx.online``."""
+    snap = s.snapshot
+    assert snap is not None
+    text = _text(s, msg.content, CROSS, COOLDOWN[CROSS])
+    if text is None or not await _pay_bugle(s, CROSS_BUGLE_ITEM):
+        s.log.info("corneta entre servidores recusada", tamanho=len(msg.content))
+        return
+    c = snap.character
+    out = pb.CrossBigBugleMsg(
+        serverId=snap.server.id, serverName=snap.server.name, userId=c.id, nickName=c.nickname or "", content=text
+    )
+    out.isLookInfo = True
+    _broadcast(s, S_CROSS_BUGLE, b.complete(out))
+
+
+@router.on(15005)
+async def channel_chat(s: GameSession, msg: pb.ChatChannelMsg) -> None:
+    """Canal da cena (8, quem está na mesma ``scene_key``), da guilda (5) e do time/sala (6); só online."""
+    if msg.channel not in (CURRENT, GUILD, TEAM):
+        s.log.info("canal de chat não suportado", canal=msg.channel)
+        return
+    await _say(s, msg, msg.channel)
+
+
+@router.on(25024)
+async def battle_cross_chat(s: GameSession, msg: pb.ChatChannelMsg) -> None:
+    """Canal 8 em batalha entre servidores (battleType 10/33/34): sem cross = canal local."""
+    await channel_chat(s, msg)
+
+
+@router.on(25096)
+async def warfield_chat(s: GameSession, msg: pb.ChatChannelMsg) -> None:
+    """Canais 6/8 na campanha entre servidores: tratado como o 15005 deste servidor."""
+    await channel_chat(s, msg)
+
+
+@router.on(15023)
+async def private_chat(s: GameSession, msg: pb.ChatFriendMsg) -> None:
+    snap = s.snapshot
+    assert snap is not None
+    text = _text(s, msg.encodeMsg, -msg.toId, PRIVATE_COOLDOWN)
+    if text is None or msg.toId == s.player_id:
+        s.log.info("privado recusado", para=msg.toId)
+        return
+    out = pb.ChatFriendMsg(
+        fromId=s.player_id,
+        fromNick=snap.character.nickname or "",
+        toId=msg.toId,
+        encodeMsg=text,
+        sendDate=b.fmt_time(s.ctx.clock.now()),
+    )
+    target = s.ctx.online.get(msg.toId)
+    if target is None or social.blocks(target, s.player_id):
+        out.result = OFFLINE  # lista negra parece offline para quem foi bloqueado
+    else:
+        target.send(S_PRIVATE, out)
+    s.send(S_PRIVATE_REPLY, out)
+
+
+@router.on(15038)
+async def user_info(s: GameSession, msg: pb.InfoReqMsg) -> None:
+    """Dados de outro jogador: o cliente pede ao receber privado de quem não é amigo e só mostra
+    a mensagem depois deste 4256."""
+    c = (await social.characters(s.ctx, [msg.otherId])).get(msg.otherId)
+    if c is None:
+        s.log.info("15038 sem jogador", outro=msg.otherId)
+        return
+    other = s.ctx.online.get(msg.otherId)
+    if other is not None and other.snapshot is not None:
+        sns = other.snapshot.sns
+    else:
+        sns = await s.ctx.characters.read(lambda uow: uow.sns.by_character(msg.otherId))
+    out = pb.RelationPlayerMsg()
+    setattr(out, "from", getattr(msg, "from"))  # "from" é palavra reservada
+    # (visto) oficial_20261023-171155-1 #70, #7753, #7758: a amizade de quem pergunta (relation 1, friendRp,
+    # friendGrade, groupId 2). (dedução) sem relação os campos ficam 0: nenhuma captura pergunta por um estranho
+    mine = s.snapshot.relations if s.snapshot is not None else []
+    if (rel := next((r for r in mine if r.other_id == msg.otherId), None)) is not None:
+        out.relation, out.friendRp, out.groupId = rel.relation, rel.friend_gp, rel.group_id
+        out.friendGrade = social.friend_grade(s.ctx, rel)
+    out.player.CopyFrom(social.simple_player(s.ctx, c))
+    out.snsInfo.CopyFrom(social.sns_info(c, sns))  # o cliente lê snsInfo sem checar nulo
+    b.complete(out)
+    social.no_job(out.snsInfo)
+    s.send(S_USER_INFO, out)
+
+
+@router.on(8353)
+async def quick_invite(s: GameSession, msg: pb.CaptainSpeakMsg) -> None:
+    """ "Fast Invite" (``QuickInviteFrame``): o texto vai quebrado em linhas (``inviteContent``) e custa 1 Bullhorn
+    (Small), com a cota grátis antes ("First 10 Attempts are Free", a mesma do 8198). Sai no canal mundo como link de
+    sala (``ChatChannelMsg.type`` 4), uma tag ``<a t="6" .../>`` por linha (visto 191924 #3763-#3766), e o clique
+    manda o 9504 com o ``id``. ``position`` 0 é sala trancada (``RoomInfo.isLock``, o cliente só lê ele e o ``name``);
+    (dedução) ``islock`` vai igual ao ``position``: a única amostra é sala sem senha, com os dois "1". Depois o leed 16
+    ("Speak in world chat") e o 83 da devoção; o oficial não mandou o 4500 da cota. O tipo 1 (casamento, ``inWedding``)
+    leva à sala do casal: ``roomType`` 4 com ``id`` "a_b" e ``position`` a senha (ChatFormat ``MarryCampaignInfo``), e
+    o 4662 da sala vai junto para o ``roomDic`` do clique (ChatOutputViewII -> op 13)."""
+    from . import wedding  # wedding importa este módulo
+
+    room = s.ctx.rooms.of(s.player_id)  # qualquer membro, com lugar livre (RoomRightView._inviteClick)
+    marry = wedding.of_couple(s.player_id) if msg.type == INVITE_WEDDING else None
+    if marry is None and (msg.type != INVITE_ROOM or room is None or rooms.OPEN not in room.seats):
+        s.log.info("8353 sem sala", tipo=msg.type, sala=room.id if room else None)
+        return
+    if _text(s, "".join(msg.inviteContent), WORLD, COOLDOWN[WORLD]) is None:
+        s.log.info("8353 recusado", tamanho=sum(map(len, msg.inviteContent)))
+        return
+    lines = [_TAG.sub("", line) for line in msg.inviteContent]  # sem strip: o oficial manteve o espaço do fim
+    if not await _pay_bugle(s, SMALL_BUGLE, free=True, notify=False):
+        s.log.info("8353 sem corneta")
+        return
+    if marry is not None:
+        key, attrs = marry.key, wedding.link(marry, s.ctx)
+        for o in s.ctx.online.sessions():
+            o.send(wedding.S_ROOMS, pb.EngageMsg(engageInfos=[wedding.room_msg(marry)]))
+    else:
+        assert room is not None
+        unlocked = int(not room.password)
+        key = str(room.id)
+        attrs = {"campaignId": room.campaign, "islock": unlocked, "position": unlocked, "roomType": rooms.PVE}
+    tail = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items())
+    link = "".join(f'<a t="6" id="{key}" name={quoteattr(t)} {tail}/>' for t in lines)
+    out = _channel_msg(s, WORLD, link)
+    out.type = ROOM_LINK
+    _broadcast(s, S_CHAT, out)
+    from . import events  # events importa login, que importa este módulo
+
+    devotion = events.devotion(s)
+    await events.leed_done(s, events.WORLD_CHAT_LEED, say=False)
+    if events.devotion(s) > devotion:
+        events.say_devotion(s)

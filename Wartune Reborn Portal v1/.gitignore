@@ -1,0 +1,3 @@
+# Gerado por D:/wartune/servidor/tools/build_cdn_overrides.py
+cdn/*
+!cdn/.htaccess

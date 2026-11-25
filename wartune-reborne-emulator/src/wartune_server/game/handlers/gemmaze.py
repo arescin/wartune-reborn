@@ -1,0 +1,283 @@
+"""Labirinto de gemas (9508..9517): abrir (4922), trocar (4923/4924), caixas (4928), comprar
+movimentos (4927), receber tudo.
+
+Regra da troca e da cascata em ``game/gemmaze.py``. O estado fica numa linha ``EventState`` (chave
+``gemmaze``, ``text`` em JSON). Cada pedido valida tudo antes, muda o snapshot, grava uma vez e só então
+manda os pacotes.
+
+Fontes: *(visto, só turco)* captura ``av_askeri_ve_odul_toplama.json`` (4922, 4923 por passo, 4924 depois de cada
+movimento, 115 da bolsa 24 e o aviso do 9517) e o login do replay turco (4922 de personagem novo);
+*(cliente)* ``GemMazeManager``, ``GemMazeView``, ``GemMazeFrame`` (compra de movimentos), ``GemMazeBagView``.
+"""
+
+from __future__ import annotations
+
+import random
+from collections.abc import Iterable
+from datetime import datetime
+from typing import Any
+
+from ...domain.models import BagType, EventState, Item, PlayerSnapshot
+from ...protocol.messages import wartune_pb2 as pb
+from ...services import ledger
+from ...templates.repository import GameTemplates
+from .. import bag, rankings, rewards
+from .. import events as ev
+from .. import gemmaze as gm
+from ..builders import login as b
+from ..builders.player import item_moved
+from ..router import router
+from ..session import GameSession
+from .player import alert
+
+KEY = "gemmaze"  # EventState do tabuleiro (text = Game.dump)
+MAZE_SIZE = 48  # (cliente) GemMazeView: com 48 itens na bolsa a troca nem sai
+BOX_IDS = (2131035, 2131036, 2131037, 2131038, 2131039)  # (visto) 4922: as 5 caixas de tesouro do labirinto
+# (visto, só turco: av_askeri_ve_odul_toplama #11, #18...) playerId da 4924; o cliente só usa a mensagem para liberar
+# a troca
+OP_OK = 1
+S_INFO, S_UPDATE, S_OP, S_CHAT, S_ITEMS, S_BUY, S_BOX = 4922, 4923, 4924, 83, 115, 4927, 4928
+_rng = random.Random()
+
+
+def _snap(s: GameSession) -> PlayerSnapshot:
+    snap = s.snapshot
+    assert snap is not None
+    return snap
+
+
+def _send(s: GameSession, code: int, msg: Any) -> None:
+    s.send(code, b.complete(msg))
+
+
+def _game(snap: PlayerSnapshot, now: datetime) -> gm.Game:
+    """O tabuleiro gravado, ou um novo, já renovado para o dia (não gravado: quem muda o estado é que grava)."""
+    row = ev.peek(snap, KEY)
+    game = gm.Game.load(row.text) if row is not None and row.text else gm.new_game(_rng)
+    gm.refresh(game, now)
+    return game
+
+
+def _save(snap: PlayerSnapshot, game: gm.Game, now: Any) -> EventState:
+    st = ev.state(snap, KEY, now)
+    st.text, st.updated_at = game.dump(), now
+    return st
+
+
+async def load_order(s: GameSession) -> None:
+    """Posição semanal (``s.gem_order``): lida no login e a cada abertura, fixa entre uma e outra como no oficial."""
+    snap = _snap(s)
+    states = await s.ctx.characters.read(lambda uow: uow.events.by_prefix(snap.character.server_id, KEY))
+    s.gem_order = rankings.gem_position(states, s.player_id, s.ctx.clock.now())
+
+
+def _info_msg(game: gm.Game, order: int) -> pb.GemMazeInfoMsg:
+    return pb.GemMazeInfoMsg(
+        allGems=[pb.GemInfoMsg(mark=m, color=c) for m, c in enumerate(game.board)],
+        score=game.score,
+        weekScore=game.week,
+        timesLeft=game.times,
+        buyTimesLeft=0,  # (visto) 0 nas duas capturas; (cliente) GemMazeModel guarda e nenhuma tela lê
+        helpTimesLeft=game.help,
+        gemLevel=game.level,
+        curExp=game.exp,
+        maxExp=game.max_exp,
+        boxMark=game.box,
+        scoreOrder=order,
+        boxesId=BOX_IDS,
+    )
+
+
+def _buy_info(templates: GameTemplates) -> tuple[int, int, int]:
+    """``Gem_Maze_BuyInfo`` = movimentos por compra, Balens por movimento (``buyTimesTips``: "spend 150 Balens to
+    purchase 10"), teto de movimentos (99 = 89 + 10, o mesmo limite do cliente, que não deixa comprar com 90 ou
+    mais). Devolve (movimentos, custo da compra, teto)."""
+    per, cost, cap = (int(x) for x in ev.config(templates, "Gem_Maze_BuyInfo", "10,15,99").split(","))
+    return per, per * cost, cap
+
+
+def _maze_fits(snap: PlayerSnapshot, templates: GameTemplates, goods: Iterable[tuple[int, int]]) -> bool:
+    return bag.side_fits(snap, templates, goods, BagType.MAZE, MAZE_SIZE)
+
+
+def _add_maze(snap: PlayerSnapshot, templates: GameTemplates, tid: int, count: int) -> list[Item]:
+    return bag.side_add(snap, templates, tid, count, BagType.MAZE, MAZE_SIZE)
+
+
+def _items_msg(items: Iterable[Item], player_id: int) -> pb.ItemMovedListMsg:
+    """115 da bolsa 24 com o estado atual de cada pilha (como o oficial: changeType 24, a posição e o item)."""
+    msg = pb.ItemMovedListMsg()
+    for item in items:
+        msg.MergeFrom(item_moved(BagType.MAZE, 0, item.pos, item, player_id))
+    return msg
+
+
+@router.on(9508)
+async def open_maze(s: GameSession, _: object) -> None:
+    """Abre o labirinto (4922). Sem tabuleiro gravado, sorteia um e grava: abrir de novo mostra o mesmo."""
+    snap = _snap(s)
+    now = s.ctx.clock.now()
+    game = _game(snap, now)
+    if ev.peek(snap, KEY) is None:
+        st = _save(snap, game, now)
+        await s.ctx.characters.save(st)
+    await load_order(s)
+    _send(s, S_INFO, _info_msg(game, s.gem_order))
+
+
+@router.on(9509)
+async def move_gem(s: GameSession, msg: pb.GemMoveMsg) -> None:
+    """Troca ``beginMark``/``endMark``: resolve a cascata inteira em memória, põe cada prêmio na bolsa 24,
+    grava uma vez e manda, por passo, o 115 (bolsa), os "Points"/"EXP" e o 4923; por fim o 4924 libera a troca.
+    Pedido inválido ou bolsa sem espaço para os prêmios: nada muda e só o 4924 (o cliente não trava)."""
+    snap = _snap(s)
+    now = s.ctx.clock.now()
+    templates = s.ctx.templates
+    game = _game(snap, now)
+    result = gm.play(game, msg.beginMark, msg.endMark, _rng, s.ctx.world.settings.get("gem_maze_reward_weights"))
+    if result is None or not _maze_fits(snap, templates, [(p.reward, p.count) for p in result.steps]):
+        s.log.info("9509 recusado", inicio=msg.beginMark, fim=msg.endMark)
+        _send(s, S_OP, pb.GemInviteOpMsg(playerId=OP_OK))
+        return
+    out: list[tuple[int, Any]] = []
+    changed: list[Item] = []
+    for step in result.steps:
+        gm.gain_exp(game, step.exp)
+        items = _add_maze(snap, templates, step.reward, step.count)
+        changed += [i for i in items if i not in changed]
+        out.append((S_CHAT, pb.ChatChannelMsg(channel=3, encodeMsg=f"Points {step.points}")))  # (só turco: "Puan")
+        out.append((S_CHAT, pb.ChatChannelMsg(channel=3, encodeMsg=f"EXP {step.exp}")))
+        out.append((S_ITEMS, _items_msg(items, s.player_id)))  # montado agora: a pilha muda no passo seguinte
+        out.append((S_UPDATE, _update_msg(step, game, s.gem_order)))
+        name = (templates.get("ItemTempInfos", step.reward) or {}).get("TemplateName", str(step.reward))
+        # formato do oficial inglês (tutorial_en: "Received: Bound Balens x 10,Daru x 10000,...")
+        out.append((S_CHAT, pb.ChatChannelMsg(channel=3, encodeMsg=f"Received: {name} x {step.count}")))
+    game.board, game.times = result.board, result.times
+    game.score += sum(p.points for p in result.steps)
+    # ponytail: o semanal soma o mesmo que o do dia e zera na semana nova (``gm.refresh``, dedução)
+    game.week += sum(p.points for p in result.steps)
+    st = _save(snap, game, now)
+    await s.ctx.characters.save(st, *changed)
+    for code, m in out:
+        _send(s, code, m)
+    _send(s, S_OP, pb.GemInviteOpMsg(playerId=OP_OK))
+
+
+def _update_msg(step: gm.Step, game: gm.Game, order: int) -> pb.GemInfoUpdateMsg:
+    """4923 de um passo: ``gemDel`` (cor 0), ``gemAdd`` (só as gemas novas: o cliente faz a gravidade)."""
+    return pb.GemInfoUpdateMsg(
+        gemDel=[pb.GemInfoMsg(mark=m, color=0) for m in step.dels],
+        gemAdd=[pb.GemInfoMsg(mark=m, color=c) for m, c in step.adds],
+        score=[step.points],
+        curExp=game.exp,
+        maxExp=game.max_exp,
+        gemLevel=game.level,
+        scoreOrder=order,
+        rewardInfo=[pb.RewardInfoMsg(rewardId=step.reward)],
+    )
+
+
+@router.on(9510)
+async def invite_friend(s: GameSession, _: object) -> None:
+    """Pedir ajuda a um amigo: sem amigos aqui (o 4925 nunca sai). O 4924 só libera a troca do cliente."""
+    s.log.info("9510 recusado: ajuda de amigo não existe no servidor")
+    _send(s, S_OP, pb.GemInviteOpMsg(playerId=OP_OK))
+
+
+@router.on(9515)
+async def help_friend(s: GameSession, _: object) -> None:
+    """Resposta de quem ajuda (sem convite pendente, porque o 4925 não sai): só registra."""
+    s.log.info("9515 recusado: ajuda de amigo não existe no servidor")
+
+
+@router.on(9513)
+async def reward_box(s: GameSession, msg: pb.GetRewardBoxMsg) -> None:
+    """Caixa de tesouro do labirinto. *(cliente)* ``GemMazeBoxView``: a caixa ``i`` abre com ``score`` >=
+    ``BOX_SCORES[i]`` e o pedido manda ``boxId`` = ``BOX_BITS[i]``; ``GemMazeManager`` põe ``boxGetMark``
+    no ``boxMark`` (bits das caixas pegas) e anima os ``rewardInfo``. *(cliente)* ``GemMazeIntergalBoxView``:
+    a dica da caixa ``i`` é o item ``boxesId[i]``, então o prêmio é esse item. Recusa: 4928 com a marca atual
+    e sem prêmio (o cliente só redesenha)."""
+    snap = _snap(s)
+    now = s.ctx.clock.now()
+    templates = s.ctx.templates
+    game = _game(snap, now)
+    i = gm.BOX_BITS.index(msg.boxId) if msg.boxId in gm.BOX_BITS else -1
+    if (
+        ev.peek(snap, KEY) is None
+        or i < 0
+        or game.score < gm.BOX_SCORES[i]
+        or game.box & msg.boxId
+        or not _maze_fits(snap, templates, [(BOX_IDS[i], 1)])
+    ):
+        s.log.info("9513 recusado", caixa=msg.boxId, pontos=game.score, marca=game.box)
+        _send(s, S_BOX, pb.GetRewardBoxRspMsg(boxGetMark=game.box))
+        return
+    game.box |= msg.boxId
+    # ponytail: a caixa vai para a bolsa do labirinto (o ícone voa para ela, como o das gemas); a bolsa
+    # certa (24 ou mochila) precisa de captura do 9513
+    items = _add_maze(snap, templates, BOX_IDS[i], 1)
+    st = _save(snap, game, now)
+    await s.ctx.characters.save(st, *items)
+    _send(s, S_ITEMS, _items_msg(items, s.player_id))
+    _send(s, S_BOX, pb.GetRewardBoxRspMsg(boxGetMark=game.box, rewardInfo=[pb.RewardInfoMsg(rewardId=BOX_IDS[i])]))
+
+
+@router.on(9516)
+async def buy_times(s: GameSession, msg: pb.GemMazeBuyTimesMsg) -> None:
+    """Compra movimentos (``Gem_Maze_BuyInfo``): ``buyTypes`` 2 aceita Balens vinculados (``bugGemMazeTimesUseBind``),
+    1 só os livres. Sem limite além do teto; os comprados somem na virada do dia. O 4927 faz o cliente somar os
+    movimentos, por isso só sai quando a compra vale."""
+    snap = _snap(s)
+    now = s.ctx.clock.now()
+    per, cost, cap = _buy_info(s.ctx.templates)
+    game = _game(snap, now)
+    if game.times + per > cap:
+        s.log.info("9516 recusado: teto de movimentos", atual=game.times)
+        return
+    spent = ledger.spend(snap.character, cost, "gemmaze_buy", now, bound=msg.buyTypes == 2, ref=str(per))
+    if spent is None:
+        s.log.info("9516 sem Balens", custo=cost)
+        return
+    game.times += per
+    st = _save(snap, game, now)
+    await s.ctx.characters.save(snap.character, st, spent)
+    _send(s, S_BUY, pb.GemMazeBuyTimesRspMsg(moveTimesLeft=game.times))
+
+
+@router.on(9517)
+async def get_all(s: GameSession, _: object) -> None:
+    """Receber tudo: a bolsa do labirinto vai para a mochila, e só se couber tudo. O cliente não tem aviso
+    de mochila cheia para isso, então a recusa fica só no log."""
+    snap = _snap(s)
+    now = s.ctx.clock.now()
+    templates = s.ctx.templates
+    maze = [i for i in snap.items if i.bag_type == BagType.MAZE]
+    if not maze:
+        return
+    if not bag.fits(snap, templates, [(i.template_id, i.count) for i in maze], now):
+        s.log.info("9517 recusado: mochila sem espaço", itens=len(maze))
+        return
+    for item in maze:
+        snap.items.remove(item)
+    changed: list[Item] = []
+    for item in maze:
+        for new in bag.add(snap, templates, item.template_id, item.count, now):
+            if new not in changed:
+                changed.append(new)
+    await s.ctx.characters.save(*changed, delete=tuple(maze))
+    removed = pb.ItemMovedListMsg()
+    for item in maze:
+        removed.moved.add(changeType=BagType.MAZE, changeObjId=0, changePos=item.pos)
+    _send(s, S_ITEMS, removed)
+    _send(s, S_ITEMS, rewards.items_msg(changed, s.player_id))
+    # texto do oficial inglês (83, tutorial_en #2114)
+    alert(s, "Reward retrieval successful!")
+
+
+def login_push(s: GameSession) -> None:
+    """Login: o 4922 só quando a conta já tem tabuleiro gravado. O login inglês (tutorial_en, conta nova: 4900 no
+    #100) não tem nenhum 4922; o replay turco (pacotes 10 e 12, depois do 4900) tem, com o tabuleiro já aberto
+    (*dedução*). Não grava."""
+    snap = _snap(s)
+    if ev.peek(snap, KEY) is not None:
+        _send(s, S_INFO, _info_msg(_game(snap, s.ctx.clock.now()), s.gem_order))

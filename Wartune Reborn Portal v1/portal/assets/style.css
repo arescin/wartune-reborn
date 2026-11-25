@@ -1,0 +1,32 @@
+:root { --bg: #0b0e14; --card: #151a24; --fg: #e8eaf0; --muted: #8a93a6; --accent: #e0a526; --err: #ff8080; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; }
+a { color: var(--accent); }
+.panel { max-width: 520px; margin: 6vh auto; padding: 0 16px; }
+.card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 12px; }
+label { display: block; margin: 12px 0 4px; color: var(--muted); }
+input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2a3142; background: #0f131b; color: var(--fg); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+button, .button { padding: 10px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #111; font-weight: 600; cursor: pointer; text-decoration: none; }
+button.secondary { background: #2a3142; color: var(--fg); }
+button:disabled { opacity: .4; cursor: default; }
+.error { color: var(--err); }
+.muted { color: var(--muted); }
+.servers { list-style: none; padding: 0; }
+.server { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.server.off { opacity: .6; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #1f6f3f; margin-left: 6px; }
+.server.off .badge { background: #5a2a2a; }
+code { word-break: break-all; color: var(--accent); }
+#game { display: none; position: fixed; inset: 0; background: #000; }
+.panel.wide { max-width: 1100px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a3142; white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; }
+tr.banned td { opacity: .6; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0 12px; }
+.grid .actions { grid-column: 1 / -1; }
+.actions input { width: auto; }
+button.danger { background: #a33; color: #fff; }
+.badge.off { background: #5a2a2a; }

@@ -1,0 +1,6 @@
+Options -Indexes
+# Só as páginas são públicas; código, modelo do config.xml e configuração não
+RedirectMatch 404 ^/wartune-reborn/portal/(src|templates)(/|$)
+<Files "config.php">
+    Require all denied
+</Files>

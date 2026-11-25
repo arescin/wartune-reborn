@@ -1,0 +1,48 @@
+# Diretórios de ambiente virtual e caches Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Caches e temporários do sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Arquivos de dados sensíveis e credenciais
+.env
+.env.local
+.env.production
+*.pem
+*.key
+*.token
+.proxy_token
+
+# Bancos de dados locais e dados de runtime
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/rsa_private.pem
+logs/
+*.log
+
+# Assets pesados da CDN (devem ser transferidos via volume / storage dedicado na VPS, não pelo Git)
+CDN/
+mirror/
+har/
+
+# Backups e despejos
+*.bak
+*.dump
+*.sql.gz

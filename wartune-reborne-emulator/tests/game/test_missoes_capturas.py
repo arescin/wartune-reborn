@@ -1,0 +1,287 @@
+"""Entrega (5014) das missões até o nível 10 entregues nas capturas novas, contra o oficial.
+
+``OFICIAL``: templateId -> (#idx da entrega, códigos S>C da janela oficial, textos do 83). A janela vai do 5014 até o
+próximo pedido do cliente, mais o 83 "Received N EXP" logo depois dele (S\\q\\oficial.md). ``GRAU``: o grau do
+personagem no 3 que vem antes do 5014 (captura). O estado vem das condições da própria missão (``rules.quest_event``,
+``rules.update_state_quests`` para o mapa, ``bag.add`` para a bolsa), não de campos montados à mão.
+Ver docs/missoes.md."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
+
+from tests.game.harness import logged_in
+from tests.test_end_to_end import TEMPLATES
+from wartune_server.domain.models import Building, Pawn, Quest
+from wartune_server.game import bag, castle, rules
+from wartune_server.protocol.messages import wartune_pb2 as pb
+
+pytestmark = pytest.mark.skipif(not TEMPLATES.exists(), reason="precisa de data/templates")
+
+# 490: o 109 que abre a janela é o ciclo do castelo (goldTotalCount sobe entre #3083 e #3086), não a entrega.
+OFICIAL: dict[int, tuple[int, list[int], list[str]]] = {
+    310: (
+        8939,
+        [4484, 4484, 4484, 4484, 4484, 111, 114, 4131, 83, 149, 3, 112, 109, 3, 52, 83],
+        [
+            '"Successfully retrieved Bound Balens x60, Daru x50000, Lvl. 4 Luck Stone x1, Lvl. 2 Charisma Gem x1"',
+            '"Received 15,000 EXP "',
+        ],
+    ),
+    360: (11761, [115, 3, 112, 109, 3, 52, 83], ['"Received 18,000 EXP "']),
+    380: (14667, [3, 112, 109, 3, 52, 83], ['"Received 13,000 EXP "']),
+    400: (15035, [115, 3, 112, 109, 83, 109, 152, 4130, 100, 150, 3, 52], ['"Received 20,000 EXP "']),
+    410: (17367, [3, 112, 109, 3, 52, 83], ['"Received 24,000 EXP "']),
+    420: (17542, [115, 3, 112, 109, 3, 52, 83], ['"Received 24,000 EXP "']),
+    430: (19336, [3, 112, 109, 83, 100, 150, 3], ['"Received 42,000 EXP "']),
+    440: (18290, [3, 112, 109, 3, 52, 83], ['"Received 42,000 EXP "']),
+    450: (20432, [3, 112, 109, 3, 52, 83], ['"Received 42,000 EXP "']),
+    460: (20602, [115, 3, 112, 109, 3, 52, 83], ['"Received 42,000 EXP "']),
+    470: (1784, [3, 112, 109, 3, 52, 83], ['"Received 48,000 EXP "']),
+    480: (3001, [3, 112, 109, 83, 100, 150, 3, 52], ['"Received 48,000 EXP "']),
+    490: (3082, [3, 112, 109, 3, 52, 83], ['"Received 48,000 EXP "']),
+    500: (5348, [115, 3, 112, 109, 3, 52, 83], ['"Received 54,000 EXP "']),
+    510: (7537, [3, 112, 109, 3, 52, 83], ['"Received 54,000 EXP "']),
+    520: (7597, [115, 3, 112, 109, 3, 52, 83], ['"Received 54,000 EXP "']),
+    550: (8188, [3, 112, 109, 3, 52, 83], ['"Received 60,000 EXP "']),
+    560: (12626, [3, 112, 109, 3, 52, 83], ['"Received 64,000 EXP "']),
+    570: (12635, [115, 3, 112, 109, 100, 150, 3, 83], ['"Received 64,000 EXP "']),
+    580: (18069, [3, 112, 109, 3, 52, 83], ['"Received 25,000 EXP "']),
+    590: (8417, [3, 112, 109, 3, 52, 83], ['"Received 72,000 EXP "']),
+    600: (14162, [3, 112, 109, 3, 52, 83], ['"Received 72,000 EXP "']),
+    610: (13701, [115, 3, 112, 109, 3, 52, 83], ['"Received 72,000 EXP "']),
+    223: (
+        1759,
+        [4484, 4484, 111, 2, 3, 83, 112, 3, 112, 3, 115, 4476, 4426, 4484, 4484, 4484],
+        [
+            '"Received: Bloodforged Staff x1, Dakan Walker\\\'s Robe x1, Spirit Covenant x1, Lvl. 25 Starter Pack x1, Minor HP Pack x5"'
+        ],
+    ),
+    241: (
+        1965,
+        [3, 112, 109, 109, 3, 83, 4152, 52, 83],
+        ['"Received 12,000 EXP "', '"Your devotion level has increased to 38."'],
+    ),
+    271: (295, [3, 112, 109, 3, 115, 4476], []),
+    312: (8089, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    313: (14068, [4594], []),
+    350: (7778, [3, 112, 109, 3, 52, 83], ['"Received 15,000 EXP "']),
+    351: (8099, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    371: (
+        8821,
+        [4484, 4484, 4484, 4484, 4484, 111, 52, 83, 3, 112, 83],
+        ['"Received: VIP Token x30"', '"Received 28,500 EXP "'],
+    ),
+    391: (8109, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    411: (5586, [3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    412: (8996, [112, 3, 112, 109, 100, 150, 3, 83], ['"Received 10,000 EXP "']),
+    421: (20153, [3, 112, 109, 3, 52, 83], ['"Received 8,000 EXP "']),
+    422: (20591, [3, 112, 109, 3, 3, 115, 4476, 4426, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484], []),
+    441: (9536, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    461: (9546, [112, 3, 112, 109, 3, 52, 83], ['"Received 5,000 EXP "']),
+    472: (9557, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    761: (8530, [3, 112, 109, 3, 52], []),
+    764: (11418, [112, 3, 112, 3, 52], []),
+    765: (1946, [3, 112, 3, 3, 4152, 52, 83], ['"Received 14,000 EXP "']),
+    768: (2274, [4484, 4260, 111, 83, 3, 112, 109, 52], ['"Recycling Succeeded!"']),
+    769: (8028, [3, 112, 109, 52], []),
+    3: (19436, [3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    6: (
+        12125,
+        [3, 112, 3, 83, 115, 4476, 4426, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 111, 52, 83],
+        ['"Received 30,000 EXP "', '"Received: Crypt Key x3"'],
+    ),
+    224: (19414, [112, 3, 112, 3, 115, 4476, 4426, 4484, 4484, 4484, 4484], []),
+    370: (8807, [115, 3, 112, 109, 3, 115, 83, 4476, 4426, 4484, 4484, 4484, 4484], ['"Received 40,000 EXP "']),
+    390: (15709, [3, 112, 109, 3, 52, 83, 4232], ['"Received 20,000 EXP "']),
+    501: (15323, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    502: (15335, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    503: (1931, [3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    530: (17961, [3, 112, 109, 3, 115, 4476, 4426, 4484, 4484, 4484], []),
+    551: (15345, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    581: (15355, [112, 3, 112, 109, 3, 52, 83], ['"Received 10,000 EXP "']),
+    621: (
+        15365,
+        [112, 3, 112, 109, 3, 52, 83, 11, 4594, 4594, 4594, 4594, 4594, 4594, 83, 4594, 4594, 4594, 4594],
+        [
+            '"Received 20,000 EXP "',
+            'channel: 10 type: 4 encodeMsg: "<a t=\\"6\\" id=\\"2\\" name=\\"Thrills await you in [The \\" campaignId=\\"9003\\" islock=\\"1\\" position=\\"1\\" roomType=\\"0\\"/><a t=\\"6\\" id=\\"2\\" name=\\"Bloodlands_(Normal)] room 2. Join now!\\" campaignId=\\"9003\\" islock=\\"1\\" position=\\"1\\" roomType=\\"0\\"/>" otherId: 324 name: "phapsuhaha" consortiaId: 1 userType: 1 appellid: 9',
+        ],
+    ),
+    623: (20264, [3, 112, 109, 3, 52, 83], ['"Received 30,000 EXP "']),
+    681: (20221, [112, 3, 112, 109, 3, 52, 83], ['"Received 30,000 EXP "']),
+    711: (4305, [112, 3, 112, 109, 3, 52, 83], ['"Received 40,000 EXP "']),
+    721: (13191, [112, 3, 112, 109, 3, 52, 83], ['"Received 80,000 EXP "']),
+    731: (487, [112, 3, 112, 109, 3, 52, 83], ['"Received 90,000 EXP "']),
+    751: (7036, [112, 3, 112, 109, 4638, 100, 150, 4484, 337, 83], ['"Received 100,000 EXP "']),
+    758: (14253, [3, 112, 109, 3, 3, 115, 83], ['"Received 25,000 EXP "']),
+    759: (10291, [], []),
+    762: (9116, [3, 112, 3, 3, 52, 83], ['"Received 35,000 EXP "']),
+    766: (
+        9566,
+        [4185, 3, 112, 109, 3, 115, 4476, 4426, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484, 4484],
+        [],
+    ),
+    767: (11297, [4185, 3, 112, 109, 3, 115, 4476, 4426, 4484, 4484, 4484, 4484, 4484, 4484, 4484], []),
+    818: (11708, [3, 112, 109, 3, 52, 83], ['"Received 20,000 EXP "']),
+    846: (8279, [], []),
+    847: (17952, [115, 3, 112, 3, 3, 52, 83], ['"Received 102,400 EXP "']),
+}
+
+# grau do personagem antes do 5014 (3 da captura)
+GRAU: dict[int, int] = {
+    310: 22,
+    360: 23,
+    380: 23,
+    400: 23,
+    410: 24,
+    420: 24,
+    430: 24,
+    440: 24,
+    450: 25,
+    460: 25,
+    470: 25,
+    480: 25,
+    490: 26,
+    500: 26,
+    510: 26,
+    520: 26,
+    550: 28,
+    560: 28,
+    570: 28,
+    580: 31,
+    590: 30,
+    600: 30,
+    610: 30,
+    223: 20,
+    241: 20,
+    271: 25,
+    312: 22,
+    313: 23,
+    350: 22,
+    351: 22,
+    371: 27,
+    391: 22,
+    411: 26,
+    412: 22,
+    421: 31,
+    422: 31,
+    441: 23,
+    461: 23,
+    472: 23,
+    761: 28,
+    764: 23,
+    765: 20,
+    768: 20,
+    769: 22,
+    501: 24,
+    502: 24,
+    503: 25,  # 86 (Amethyst): sem chamador no servidor; passa pelo contador direto (quest_event), não por gancho real
+    530: 31,
+    551: 24,
+    581: 24,
+    621: 24,
+    623: 25,
+    681: 25,
+    711: 26,
+    721: 29,
+    731: 29,
+    751: 29,
+}
+
+PENDENTES = {
+    310: "recompensa com atividades 4484/111/114/4131/149 de outras áreas fora da entrega de missão",
+    # saídas medidas (servidor | oficial): 400 [..109,4130,100,150,3,52,83] | [..109,83,109,152,4130,100,150,3,52];
+    # 412 [3,112,109,100,150,3,52,83] | [3,112,109,100,150,3,83]; 430 [3,112,109,100,150,3,52,83] | [3,112,109,83,100,150,3];
+    # 480 [3,112,109,100,150,3,52,83] | [3,112,109,83,100,150,3,52]; 570 [..,100,150,3,52,83] | [..,100,150,3,83].
+    # O 52 e o 83 da EXP mudam de lugar entre as subidas sem regra achada nas 5 capturas (o servidor põe sempre 52, 83)
+    400: "subida 23 -> 24: oficial traz 83/109/152 no meio (refinaria e tecnologia) que o servidor não manda nesta janela",
+    412: "subida 22 -> 23: o 52 some no oficial e o 83 da EXP vai para depois do 150 (sem regra nas capturas)",
+    430: "subida 24 -> 25: oficial põe o 83 da EXP antes do 100 e não manda 52; servidor faz o contrário",
+    480: "subida 25 -> 26: oficial põe o 83 da EXP antes do 100 e o 52 no fim; servidor põe 52 e 83 depois do 150",
+    570: "subida 28 -> 29: o 52 some no oficial e o 83 da EXP fica depois do 150 (servidor põe 52 antes)",
+    223: "recompensa com 4484/111 (pacote inicial) e 115 de itens: janela mistura outras áreas",
+    241: "bênção do altar (tipo 30, gancho altar.py:142): teste não chama o handler 5145 nem monta guilda com altar (não feito)",
+    271: "árvore (tipo 20): 115 e 4476 fora da entrega; o teste não monta a árvore regada",
+    313: "tipo 31 (cena com 1 jogador): janela só com 4594 de evento; gancho em campaign.py, não reproduzido",
+    371: "tipo 31 (cena com 2 jogadores): janela com 4484/111 do pacote de VIP; gancho em campaign.py",
+    422: "arena (tipo 16): gancho em arena.py; 3 duplicado na janela, causa não confirmada",
+    765: "atacar cidade (tipo 8): gancho em outer_city.py, não reproduzido no teste",
+    768: "reciclagem (tipo 46, gancho forge.py:560): teste não chama o handler 8340 nem põe equipamento na bolsa (não feito)",
+    769: "refino (tipo 47): gancho em forge.py; oficial sem 83 da EXP, causa não confirmada",
+    3: "Astro (tipo 36, stars.py): janela do oficial traz 109 e 3 da Daru; a contagem de 36 não é reproduzida no teste",
+    6: "Forgotten Catacombs (tipo 38): gancho em tower.py:172 existe; janela com 4484/4426/4476 de recompensa não reproduzida",
+    224: "guilda (tipo 22/29, oferta de guilda): o teste não monta guilda com contribuição",
+    370: "item de bolsa (tipo 28) com 4476/4426/4484 de outras áreas na janela",
+    390: "mapa (tipo 37): o personagem precisa estar no mapa da condição, não montado",
+    530: "campanha (tipo 14, boss 9002): janela com 4484 de outras áreas",
+    621: "prédio (tipo 2): janela com 4594 de outras áreas",
+    751: "prédio (tipo 2) e 4638 da missão 130: janela com 100/150 de subida de nível",
+    758: "battleground (tipo 44): sistema inexistente",
+    759: "chefe mundial (tipo 40, 10 batalhas): gancho em worldboss.py, não reproduzido",
+    762: "chefe mundial (tipo 41, dano): gancho em worldboss.py; janela com 3 duplicado",
+    766: "battleground (tipo 44): sistema inexistente",
+    767: "battleground (tipo 45): sistema inexistente",
+    818: "war camp (tipo 50): sistema inexistente",
+    846: "guilda (tipo 49, Shadow Crystal): o oficial não tem janela de entrega completa; estado de guilda não montado",
+    847: "guilda (tipo 49, Shadow Crystal II): estado de guilda não montado; janela com 102.400 EXP",
+}
+
+CASOS = [
+    pytest.param(k, marks=pytest.mark.xfail(reason=PENDENTES[k], strict=True)) if k in PENDENTES else k
+    for k in sorted(OFICIAL)
+]
+
+
+@pytest.mark.parametrize("template_id", CASOS)
+async def test_entrega_ate_nivel_10_bate_com_o_oficial(tmp_path: Path, template_id: int) -> None:
+    _, codigos, textos_83 = OFICIAL[template_id]
+    async with logged_in(tmp_path, novice=11000) as g:
+        templates = g.server.services.templates
+        now = datetime.now(UTC)
+        session = g.server.online.get(g.user_id)
+        assert session is not None and session.snapshot is not None
+        snap = session.snapshot
+        snap.character.grades = GRAU[template_id]
+        snap.character.novice_process = castle.CASTLE_READY  # o castelo já está pronto (8281 feito), como no oficial
+        castle.ensure(snap, g.server.services.templates, now)  # o castelo já montado no login: filas e prédios do nível
+        # exército cheio (o oficial não manda 139 "Insufficient Troops"): o líder sobe de nível na entrega, então o
+        # limite do nível seguinte não é conhecido aqui; um número acima dele basta
+        pawn = rules.army_pawn(snap) or Pawn(g.user_id, 10101)
+        if pawn not in snap.pawns:
+            snap.pawns.append(pawn)
+        pawn.army_count = 100000
+        if 150 in codigos:  # subida de nível no oficial: EXP logo abaixo do limite do próximo grau (UpGradeTempInfos)
+            snap.character.total_gp = dict(rules.grade_steps(templates))[GRAU[template_id] + 1] - 1
+        q = Quest(g.user_id, template_id, now)
+        snap.quests.append(q)
+        for row in rules.conditions(templates, template_id):
+            kind = int(row["CondictionType"])
+            para1, para2 = int(row.get("Para1") or 0), int(row.get("Para2") or 0)
+            if kind in rules.GOODS_CONDITIONS:
+                bag.add(snap, templates, para1, para2, now)
+            elif kind == rules.MAP_CONDITION:  # o personagem estava no mapa da condição (checkMapId)
+                assert snap.castle is not None
+                snap.castle.map_id = para2
+                rules.update_state_quests(snap, templates, [q])
+            elif kind == rules.BUILDING_CONDITION:  # o prédio já está no nível pedido (update_building_quests)
+                levels = templates.find("BuildingTempInfos", SonType=row["Para1"])
+                target = next(int(r["TemplateId"]) for r in levels if int(r["BuildingGrade"]) == para2)
+                mine = [b for b in snap.buildings if b.template_id in {int(r["TemplateId"]) for r in levels}]
+                if mine:  # o prédio já existe no castelo (castle.ensure): sobe o mesmo, sem duplicar
+                    mine[0].template_id = target
+                else:
+                    snap.buildings.append(Building(snap.character.id or 0, target))
+                rules.update_building_quests(snap, templates)
+            else:
+                rules.quest_event(snap, templates, kind, para1, para2 or 1)
+        await g.server.services.characters.save(*snap.items)  # o item da bolsa precisa existir no banco (como no jogo)
+        g.client.send(5014, pb.QuestFinishedReqMsg(templateId=template_id))
+        got = await g.idle(0.5)
+        # texto do 83 entre aspas, como na tabela (o encodeMsg cru do pacote)
+        textos = [f'"{pb.ChatChannelMsg.FromString(p.body).encodeMsg}"' for p in got if p.code == 83]
+        assert [p.code for p in got] == codigos, " ".join(str(p.code) for p in got)
+        assert textos == textos_83
