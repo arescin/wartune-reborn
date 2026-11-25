@@ -107,17 +107,20 @@ WARTUNE_GM_USERS=admin
 
 A implantação em produção foi concluída e validada na VPS Hostinger com EasyPanel:
 
+* **Repositório GitHub Unificado:** [https://github.com/arescin/wartune-reborn](https://github.com/arescin/wartune-reborn)
 * **VPS IP:** `179.198.96.49`
 * **Domínio EasyPanel:** `thnsdu.easypanel.host`
 * **Projeto EasyPanel:** `bots`
-* **Serviço Principal:** `wartune-server` (Container ativo consumindo ~453 MB RAM, Python 3.12 asyncio)
+* **Serviço Principal:** `wartune-server` (Container ativo em Python 3.12 asyncio)
+* **Serviço CDN Nginx Dedicado:** `wartune-cdn` (Container Nginx Alpine servindo assets em `/opt/wartune-cdn`)
 * **URL do Portal / Web Player:** `https://wartune-server.thnsdu.easypanel.host/`
+* **URL Oficial da CDN:** `https://wartune-cdn.thnsdu.easypanel.host/`
 * **Página de Jogo (Web Ruffle):** `https://wartune-server.thnsdu.easypanel.host/play?user=NOME_DO_JOGADOR`
 * **Link Direto Flash Projector (Desktop):** `https://wartune-server.thnsdu.easypanel.host/projector?user=NOME_DO_JOGADOR`
 * **Configuração do Cliente (`config.xml`):** `https://wartune-server.thnsdu.easypanel.host/config.xml`
 * **Socket TCP Principal (Flash):** `179.198.96.49:5000` (Porta direta do host aberta e validada)
 * **Ponte WebSocket (WSS):** `wss://wartune-server.thnsdu.easypanel.host/ws` (compatível com navegadores modernos)
-* **Assets CDN (SWFs / XMLs / Imagens):** `https://wartune-server.thnsdu.easypanel.host/cdn/...`
+* **Assets CDN (SWFs / XMLs / Imagens):** `https://wartune-cdn.thnsdu.easypanel.host/cdn/...` e `https://wartune-cdn.thnsdu.easypanel.host/game/...`
 
 ### Evidência de Homologação Ponta a Ponta (`test_live_vps.py`)
 

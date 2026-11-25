@@ -26,15 +26,18 @@ O projeto é organizado em três componentes integrados:
 
 ## 2. INSTÂNCIA ONLINE EM PRODUÇÃO (VPS HOSTINGER)
 
-O servidor de produção já se encontra ativo, integrado e homologado:
+O ecossistema oficial está totalmente ativo, unificado e homologado na VPS Hostinger:
 
+* **Repositório Oficial Unificado:** [https://github.com/arescin/wartune-reborn](https://github.com/arescin/wartune-reborn)
 * **Portal & Web Player:** [https://wartune-server.thnsdu.easypanel.host/](https://wartune-server.thnsdu.easypanel.host/)
+* **Serviço CDN Nginx Oficial:** [https://wartune-cdn.thnsdu.easypanel.host/](https://wartune-cdn.thnsdu.easypanel.host/)
+  - Rota Loader (`/game/`): `https://wartune-cdn.thnsdu.easypanel.host/game/Loading.swf`
+  - Rota Assets/SWFs (`/cdn/`): `https://wartune-cdn.thnsdu.easypanel.host/cdn/ui/zh_cn/swf/core.swf`
 * **Jogar no Navegador (Web Ruffle):** `https://wartune-server.thnsdu.easypanel.host/play?user=SEU_NICK`
 * **Jogar via Adobe Flash Projector (Desktop):** `https://wartune-server.thnsdu.easypanel.host/projector?user=SEU_NICK`
 * **Configuração Dinâmica do Cliente:** `https://wartune-server.thnsdu.easypanel.host/config.xml`
-* **Socket TCP Direto:** `179.198.96.49:5000`
+* **Socket TCP Direto Flash:** `179.198.96.49:5000`
 * **Ponte WebSocket (WSS):** `wss://wartune-server.thnsdu.easypanel.host/ws`
-* **Proxy de Assets CDN:** `https://wartune-server.thnsdu.easypanel.host/cdn/`
 
 ---
 
