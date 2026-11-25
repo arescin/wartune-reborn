@@ -18,7 +18,7 @@ RUN a2enmod rewrite headers
 COPY docker/portal/apache.conf /etc/apache2/sites-available/000-default.conf
 
 # Copiar arquivos da aplicação
-COPY "Wartune Reborn Portal v1/" /var/www/html/
+COPY ["Wartune Reborn Portal v1/", "/var/www/html/"]
 
 # Ajustar permissões para o www-data
 RUN chown -R www-data:www-data /var/www/html && \
