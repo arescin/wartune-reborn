@@ -48,6 +48,11 @@ har/
 *.sql.gz
 
 # Backups de repositórios git internos
+
+# Scripts temporários de diagnóstico, teste e inspeção
+scripts_diag/
+data_pt_assets/
+
 **/.git_portal_backup/
 
 # Temporários de automação e testes
