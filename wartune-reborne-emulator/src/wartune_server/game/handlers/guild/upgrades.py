@@ -214,7 +214,7 @@ async def learn(s: GameSession, msg: pb.ConsortiaMsg) -> None:
     """Aprende um nível de habilidade: gasta a contribuição pessoal (``NeedOffer`` do nível) e
     não passa da pesquisa da guilda daquele tipo. (visto) oficial_20261023-171155-1 #5045-#5051: 3 já sem a
     contribuição e com o nível antigo, 110 ``{propertyType 3, value}`` (o bônus do nível, 40), 150 com os
-    atributos novos (``rules.guild_skills``), 3 com o nível novo e 111 "Successfully learned skill!"."""
+    atributos novos (``rules.guild_skills``), 3 com o nível novo e 111 "Habilidade aprendida com sucesso!"."""
     attr = gd.SKILLS.get(msg.studySkill)
     mine = _mine(s)
     c = _char(s)
@@ -242,7 +242,7 @@ async def learn(s: GameSession, msg: pb.ConsortiaMsg) -> None:
     s.send(S_EFFECT, pb.PropertyUpdatedMsg(propertyType=GUILD_SKILL_EFFECT, value=value))
     s.send(S_ARMY, b.complete(army(s, s.snapshot)[0]))
     _player(s)
-    _alert(s, "Successfully learned skill!")
+    _alert(s, "Habilidade aprendida com sucesso!")
 
 
 def _buy_result(s: GameSession, buy: pb.BuyInfo, result: int) -> None:

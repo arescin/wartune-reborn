@@ -721,7 +721,7 @@ async def lucky_exchange(s: GameSession, msg: pb.LuckExchangeOpMsg) -> None:
     a sorte cheia a troca dá um item ``rare`` e zera ("Receive a rare item when Luck Blessings is full", language
     ``materialNoteTxt``). Sem ser rara: ``dropType`` 1 todos, 2 e 4 um sorteado, 3 cada um pela chance (títulos
     ``LuckyexchangeBagItem.titleTxt1-4``). Resposta: 364 da sorte e o 4247 zerado, que o oficial manda na recusa
-    (``oficial_20261027-152321-1 #11765-#11767``: "Insufficient exchange items.")."""
+    (``oficial_20261027-152321-1 #11765-#11767``: "Itens insuficientes para troca.")."""
     from .events import send_empty_rate  # noqa: PLC0415  (events importa este módulo)
 
     snap = s.snapshot
@@ -733,11 +733,11 @@ async def lucky_exchange(s: GameSession, msg: pb.LuckExchangeOpMsg) -> None:
     need = int(ed["consumeItemCount"]) * count if ed else 0
     if ed is None or count <= 0 or (luck < int(ed["luckValue"]) and count > int(ed["luckValue"]) - luck):
         s.log.info("9610 recusado", troca=msg.exchangeId, vezes=count)
-        alert(s, "Insufficient exchange items.")
+        alert(s, "Itens insuficientes para troca.")
         send_empty_rate(s)
         return
     if bag.count_of(snap, int(ed["consumeItemId"])) < need:
-        alert(s, "Insufficient exchange items.")
+        alert(s, "Itens insuficientes para troca.")
         send_empty_rate(s)
         return
     cfg = _lucky_cfg(s)

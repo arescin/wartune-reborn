@@ -1055,10 +1055,10 @@ async def bag_buy(s: GameSession, msg: pb.PayTypeMsg) -> None:
     c.bag_count += rows * BAG_ROW
     await s.ctx.characters.save(c, ledger)
     # (visto) oficial_20261024-191924-1 #3916-#3921 (1 linha) e oficial_20261027-152321-1 #9378-#9383 (3 linhas, o
-    # texto muda com o número): 3, 150, 4434, 111 "Successfully unlocked N inventory row(s).", 3
+    # texto muda com o número): 3, 150, 4434, 111 "Desbloqueado(s) com sucesso N inventory row(s).", 3
     _player(s)
     balens_changed(s)
-    alert(s, f"Successfully unlocked {rows} inventory row(s).")
+    alert(s, f"Desbloqueado(s) com sucesso {rows} inventory row(s).")
     _player(s)
 
 

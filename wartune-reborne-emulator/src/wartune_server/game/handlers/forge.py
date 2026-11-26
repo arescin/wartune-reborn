@@ -229,7 +229,7 @@ async def inlay(s: GameSession, msg: pb.StoreReqMsg) -> None:
     if old > 0:
         send(s, 111, pb.ChatChannelMsg(channel=7, encodeMsg="Swap Successful"))
     else:
-        alert(s, "Successfully Socketed Gem!")
+        alert(s, "Gema encaixada com sucesso!")
     if gem == GEM:
         await offer.progress(s, offer.SOCKET)  # "Socket a Gem"
 

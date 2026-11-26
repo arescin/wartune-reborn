@@ -162,7 +162,7 @@ async def _buy(
         return alert(s, "Daily purchase limit reached.")  # TODO(inventado) texto (cliente: funny.groupbuy.error1)
     ledger = cash.pay(snap.character, front, 1, "shop", f"groupon:{offer['id']}", now, gift_ok=False)
     if ledger is None:
-        return alert(s, "Insufficient Balens")
+        return alert(s, "Diamantes insuficientes")
     st = {**st, "buy": st["buy"] + 1, "paid": st["paid"] + front, "offer": offer}
     sold_st = mj.store_shared(snap, SOLD, bump(shared, offer), now)
     rec = count_buy(snap, key, 1, now)
@@ -184,7 +184,7 @@ async def _settle(
     if diff > 0:
         ledger = cash.pay(snap.character, diff, 1, "shop", ref, now, gift_ok=False)
         if ledger is None:
-            return alert(s, "Insufficient Balens")
+            return alert(s, "Diamantes insuficientes")
     else:
         ledger = cash.change(snap.character, -diff, 0, "groupon", ref, now)
     st = {**st, "paid": final, "settled": True}

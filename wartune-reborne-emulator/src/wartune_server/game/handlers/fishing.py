@@ -256,7 +256,7 @@ async def _send_help(s: GameSession, f: fs.Fisher, paras: list[int]) -> None:
             else None
         )
         if cost > 0 and spent is None:
-            alert(s, "Insufficient Balens")  # TODO(inventado) texto da recusa
+            alert(s, "Diamantes insuficientes")  # TODO(inventado) texto da recusa
             return
         await s.ctx.characters.save(snap.character, *([spent] if spent else []))
         _player(s)

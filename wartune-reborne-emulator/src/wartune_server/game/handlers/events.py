@@ -561,7 +561,7 @@ async def _sign(s: GameSession, auto: bool) -> None:
     await s.ctx.characters.save(*rewards.owners(snap), st, *new)
 
     if not auto:  # (visto) oficial_20261024-121659-1 #699-#701 (dia sem pacote): 111 e depois o 4177
-        alert(s, "Check-In Successful!")
+        alert(s, "Check-in realizado com sucesso!")
     s.send(S_SIGN, pb.PlayerSignRspMsg(signDate=b.fmt_time(now), signTimes=times, signSite=st.value))
     if drops:
         alert(s, text)
@@ -719,7 +719,7 @@ async def leed_box(s: GameSession, msg: pb.LeedFinishedReqMsg) -> None:
         s.log.info("8235 recusado", bau=msg.site, atividade=total)
         if bit and not box.value & bit and total >= LEED_BOX[msg.site - 1]:
             # (visto) oficial_20261027-152321-1 #6040-#6042: mochila cheia, 111 e depois o 4150 com result false
-            alert(s, "Insufficient Inventory space.")
+            alert(s, "Espaço insuficiente no inventário.")
         s.send(S_LEED_RECEIVE, pb.LeedFinishedRspMsg(result=False, site=msg.site, leedProcess=box.value))
         return
     box.value, box.updated_at = box.value | bit, now
