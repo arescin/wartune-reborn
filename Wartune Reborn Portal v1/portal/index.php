@@ -65,7 +65,8 @@ if ($account) {
     </form>
 <?php else: ?>
     <p class="muted">Conectado como <b><?= h($account['username']) ?></b> · <a href="logout.php">sair</a><?php
-        if (in_array($account['username'], $CONFIG['gm_users'] ?? [], true)): ?> · <a href="admin.php">painel GM</a><?php endif ?></p>
+        $isGm = in_array(strtolower($account['username']), array_unique(array_merge(['admin', 'arescin', 'arescinbr'], array_map('strtolower', $CONFIG['gm_users'] ?? []))), true);
+        if ($isGm): ?> · <a href="admin.php" style="font-weight: bold; color: #38bdf8;">painel GM</a><?php endif ?></p>
     <h2>Escolha o servidor</h2>
     <?php if (!$servers): ?>
         <p class="error">Nenhum servidor publicado ainda. Suba o servidor do jogo.</p>
