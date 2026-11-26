@@ -48,6 +48,7 @@ S_GRADE_BOXES = 2  # U_C_PLAYER_GRADE (NoviceReqMsgMsg): só o gradeProcess; o c
 S_COPIES = 4240  # MultiCampaignEnterCountMsg: entradas de campanha em grupo (The Empire Crusade)
 S_EFFECT, S_ITEM_BUFFER = 110, 4188  # PropertyUpdatedMsg e ItemBufferRspMsg dos pergaminhos de efeito
 BOX, USE, GEM_BOX, BLOOD, EFFECT = "298", "203", "206", "209", "201"  # ItemTempInfo.SonType usáveis
+BOUNTY_SCROLL = "213"  # Pergaminho de recompensa (bounty scroll)
 MOUNT_CARD = "218"  # carta de montaria
 POWER_CARD = "600"  # carta de poder (systems.CARD_ITEM)
 PROTECTION = buffs.PROTECTION  # City Protection Token (208006): o cliente conta pelo 4452 e para com o 8562
@@ -298,6 +299,7 @@ async def use_item(s: GameSession, msg: pb.ItemUseMsg) -> None:
     uses[monsters.FOG_SON_TYPE] = _use_divine_light
     uses[MOUNT_CARD] = _use_mount_card
     uses[POWER_CARD] = _use_power_card
+    uses[BOUNTY_SCROLL] = _use_bounty_scroll
     use = uses.get(row.get("SonType", ""))
     if use is None or not await use(s, item, row, n):
         s.log.info("5006 recusado", pedido=str(msg), item=item.template_id, sontype=row.get("SonType"))
@@ -558,9 +560,35 @@ async def _box_items(s: GameSession, box: Item, n: int, stones: dict[int, int]) 
     return True
 
 
+_BOX_DROPS_CACHE: dict[int, tuple[list[tuple[int, int]], bool]] | None = None
+
+
+def _get_box_drops(tid: int) -> tuple[list[tuple[int, int]], bool] | None:
+    global _BOX_DROPS_CACHE
+    if _BOX_DROPS_CACHE is None:
+        _BOX_DROPS_CACHE = {}
+        from pathlib import Path
+
+        for p in [
+            Path("data/templates/box_drops.json"),
+            Path("/app/data/templates/box_drops.json"),
+            Path(__file__).resolve().parents[4] / "data" / "templates" / "box_drops.json" if len(Path(__file__).resolve().parents) > 4 else None,
+        ]:
+            if p is not None and p.exists():
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    for k, v in data.items():
+                        _BOX_DROPS_CACHE[int(k)] = ([(int(i[0]), int(i[1])) for i in v["goods"]], bool(v["one_of"]))
+                    break
+                except Exception:
+                    pass
+    return _BOX_DROPS_CACHE.get(tid)
+
+
 _NAMES: dict[int, dict[str, int]] = {}  # id(templates) -> nome normalizado -> TemplateId (o menor)
-_FIXED = re.compile(r"\b(?:Contents|Contains|containing):\s*", re.I)
-_ONE_OF = re.compile(r"one of the following(?: items)?:\s*", re.I)
+_FIXED = re.compile(r"\b(?:Contents|Contains|containing|Conteúdo):\s*", re.I)
+_ONE_OF = re.compile(r"(?:one of the following(?: items| rewards)?|chance to (?:get|obtain) one of the following(?: items| rewards)?|chance of getting one of the following|uma das seguintes recompensas|um dos seguintes itens):\s*", re.I)
 _MAYBE = re.compile(r"chance|may contain|random", re.I)
 _TOKEN = re.compile(r"^(?:(\d[\d,]*) (.+)|(.+?) ?[x×\*] ?(\d[\d,]*)|(.+))$")  # sem número: 1
 
@@ -606,13 +634,12 @@ def box_contents(s: GameSession, description: str) -> tuple[list[tuple[int, int]
 
 
 async def _open_described(s: GameSession, box: Item, row: Row, n: int) -> bool:
-    """Caixa 206 sem tabela de drop (Property1 = o próprio id): o conteúdo vem da descrição (``box_contents``).
-    "one of the following": TODO(inventado) sorteio uniforme entre as opções (a descrição não dá chance). Mochila
-    cheia: recusa com o aviso do pacote 298 (visto 215937 #585)."""
+    """Caixa 206 sem tabela de drop (Property1 = o próprio id): o conteúdo vem de box_drops.json ou da descrição.
+    "one of the following": sorteio uniforme entre as opções. Mochila cheia: recusa com o aviso do pacote 298."""
     snap = s.snapshot
     assert snap is not None
     templates, now, c = s.ctx.templates, s.ctx.clock.now(), snap.character
-    parsed = box_contents(s, row.get("Description", ""))
+    parsed = _get_box_drops(box.template_id) or box_contents(s, row.get("Description", ""))
     if parsed is None:
         return False
     options, one = parsed
@@ -646,6 +673,42 @@ async def _open_described(s: GameSession, box: Item, row: Row, n: int) -> bool:
     send(s, S_ALERT, pb.ChatChannelMsg(channel=7, encodeMsg=text))
     _player(s)
     send(s, S_CHAT, pb.ChatChannelMsg(channel=3, encodeMsg=text))
+    return True
+
+
+async def _use_bounty_scroll(s: GameSession, item: Item, row: Row, _: int) -> bool:
+    """Pergaminho de recompensa (SonType 213): Property1 = qualidade do pergaminho (1..5).
+    Adiciona ou atualiza uma tarefa de recompensa daquela qualidade no painel do jogador."""
+    from . import offer
+
+    snap = s.snapshot
+    assert snap is not None
+    now = s.ctx.clock.now()
+    quality = max(1, min(5, int(row.get("Property1") or 1)))
+
+    changed, gone = _consume(snap, item, 1)
+    board = offer._board(snap, now)
+    data = offer._json(board)
+    if data and "ids" in data and "q" in data:
+        updated = False
+        for idx in range(len(data.get("st", []))):
+            if data["st"][idx] == offer.CAN_ACCEPT and data["q"][idx] < quality:
+                data["q"][idx] = quality
+                updated = True
+                break
+        if not updated and len(data.get("q", [])) > 0:
+            data["q"][0] = quality
+        board.text = json.dumps(data)
+        await s.ctx.characters.save(*changed, board, delete=tuple(gone))
+        _send_items(s, changed, gone)
+        offer._send_board(s, snap, now)
+    else:
+        await s.ctx.characters.save(*changed, delete=tuple(gone))
+        _send_items(s, changed, gone)
+
+    qualities_pt = {1: "Branca", 2: "Verde", 3: "Azul", 4: "Roxa", 5: "Laranja"}
+    q_name = qualities_pt.get(quality, str(quality))
+    send(s, S_ALERT, pb.ChatChannelMsg(channel=7, encodeMsg=f"Missão de recompensa [{q_name}] adicionada ao Painel!"))
     return True
 
 

@@ -338,6 +338,9 @@ async def use_trial_card(s: GameSession, item: Item, row: Mapping[str, str], n: 
     assert snap is not None
     hours = int(row.get("Property3") or 0) * n
     if hours <= 0:
+        days = int(row.get("Property2") or 0) * n
+        hours = days * 24
+    if hours <= 0:
         return False
     now = s.ctx.clock.now()
     gone = bag.take_one(snap, item, n)  # antes de qualquer await
