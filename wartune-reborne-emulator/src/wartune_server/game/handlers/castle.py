@@ -14,7 +14,7 @@ from ...domain.models import Building, PlayerSnapshot
 from ...protocol.messages import wartune_pb2 as pb
 from ...services.ledger import pay
 from ...templates.repository import GameTemplates, Row
-from .. import buffs, rules
+from .. import buffs, events as ev, rules
 from .. import castle as cs
 from ..builders import login as b
 from ..builders.army import castle_pawns, unlocked_pawns
@@ -107,8 +107,15 @@ async def _build(s: GameSession, code: int, building: Building | None, target: R
     snap = s.snapshot
     assert snap is not None and snap.castle is not None
     c, templates, now = snap.character, s.ctx.templates, s.ctx.clock.now()
+    order_type = cs.order_type_for(target)
+    covenant = order_type in (cs.BUILD, cs.TECH_ORDER) and any(
+        ev.has_contract(snap, cid, now) for cid in (1, 2, 3, 4, 5, 6)
+    )
+    if covenant:
+        for o in cs.orders_of(snap, order_type):
+            o.begin_at, o.need_time = now, 0
     why = _check_target(s, snap, target)
-    order = cs.free_order(snap, cs.order_type_for(target), now)
+    order = cs.free_order(snap, order_type, now)
     gold, crystals = int(target["GoldConsume"]), int(target["CrystalsConsume"])
     before = cs.yield_msg(snap, templates, now)  # já conta a produção pendente
     if why is None and order is None:
@@ -125,7 +132,7 @@ async def _build(s: GameSession, code: int, building: Building | None, target: R
         building = Building(c.id or 0, int(target["TemplateId"]))
         snap.buildings.append(building)
     building.template_id = int(target["TemplateId"])
-    order.begin_at, order.need_time = now, int(target["UpgradeTime"])
+    order.begin_at, order.need_time = now, 0 if covenant else int(target["UpgradeTime"])
     unlocked = cs.unlock(snap, templates, building)
     quests = rules.update_building_quests(snap, templates)
     await s.ctx.characters.save(c, snap.castle, building, order, *unlocked, *quests)

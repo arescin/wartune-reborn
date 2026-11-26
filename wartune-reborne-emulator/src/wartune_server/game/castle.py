@@ -17,7 +17,7 @@ from ..domain import gameday
 from ..domain.models import Building, BuildOrder, Castle, PlayerSnapshot
 from ..protocol.messages import wartune_pb2 as pb
 from ..templates.repository import GameTemplates, Row
-from . import buffs, mines, rules
+from . import buffs, events as ev, mines, rules
 from .builders import login as b
 from .session import GameSession
 
@@ -213,6 +213,16 @@ def orders_of(snap: PlayerSnapshot, order_type: int) -> Iterator[BuildOrder]:
 
 
 def free_order(snap: PlayerSnapshot, order_type: int, now: datetime) -> BuildOrder | None:
+    covenant = order_type in (BUILD, TECH_ORDER) and any(
+        ev.has_contract(snap, cid, now) for cid in (1, 2, 3, 4, 5, 6)
+    )
+    if covenant:
+        order = next(orders_of(snap, order_type), None)
+        if order is None:
+            order = new_order(snap, order_type, now)
+        order.need_time = 0
+        order.begin_at = now
+        return order
     return next((o for o in orders_of(snap, order_type) if o.remain(now) <= 0), None)
 
 
@@ -252,6 +262,12 @@ def impose_order(snap: PlayerSnapshot, now: datetime) -> BuildOrder | None:
 
 
 def order_list(snap: PlayerSnapshot, now: datetime) -> pb.BuildOrderList:
+    covenant = any(ev.has_contract(snap, cid, now) for cid in (1, 2, 3, 4, 5, 6))
+    if covenant:
+        for o in snap.orders:
+            if o.order_type in (BUILD, TECH_ORDER):
+                o.need_time = 0
+                o.begin_at = now
     return pb.BuildOrderList(buildOrder=[order_full(o, now) for o in snap.orders])
 
 

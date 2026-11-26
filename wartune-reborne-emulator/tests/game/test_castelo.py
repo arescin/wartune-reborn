@@ -854,3 +854,40 @@ async def test_reaching_grade_9_builds_the_depot(tmp_path: Path) -> None:
         assert [p.code for p in got][:2] == [109, 4130]
         assert pb.CastleYieldMsg.FromString(got[0].body).goldMax == 450000
         assert pb.BuildingInfoListMsg.FromString(got[1].body).building[0].templateId == 30101
+
+
+async def test_upgrade_with_spirit_covenant_clears_time_instantly(tmp_path: Path) -> None:
+    """Spirit Covenant ativo zera automaticamente o tempo de upgrade de cidade e academia."""
+    from wartune_server.domain.models import Building
+    from wartune_server.game import events as ev
+    from wartune_server.game.builders import login as b
+
+    async with logged_in(tmp_path, novice=READY) as g:
+        snap = await _set(g, grades=2, gold=10000, point=0)
+        session = g.server.online.get(g.user_id)
+        assert session is not None
+        now = session.ctx.clock.now()
+
+        # Ativa o Spirit Covenant (contrato do rei)
+        st = ev.state(snap, "king:1", now)
+        st.text, st.updated_at = b.fmt_time(now + timedelta(days=30)), now
+        await g.server.services.characters.save(st)
+
+        council = _building(snap, 90101)
+        g.client.send(8203, pb.BuildingOptionReqMsg(buildingId=council))
+        got = await g.until(83)
+        assert 151 in [p.code for p in got]
+        order_msg = next(pb.OrderInfoMsg.FromString(p.body) for p in got if p.code == 151)
+        # Tempo deve ser zerado imediatamente (remainTime == 0)
+        assert order_msg.remainTime == 0
+
+        # Upgrade de tecnologia na academia também zera tempo
+        snap.character.grades = 20
+        snap.character.crystals = 100000
+        snap.buildings.append(Building(g.user_id, 50101)) # Academia Lvl 1
+        g.client.send(8202, pb.BuildingOptionReqMsg(sonType=1304)) # Gold Production Lvl 1
+        got_tech = await g.until(151)
+        tech_order = pb.OrderInfoMsg.FromString(got_tech[-1].body)
+        assert tech_order.remainTime == 0
+
+
