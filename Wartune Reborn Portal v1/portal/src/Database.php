@@ -43,4 +43,16 @@ final class Database
     {
         $this->pdo->prepare($sql)->execute($params);
     }
+
+    public function exec(string $sql, array $params = []): int
+    {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->rowCount();
+    }
+
+    public function lastInsertId(?string $name = null): string
+    {
+        return $this->pdo->lastInsertId($name);
+    }
 }

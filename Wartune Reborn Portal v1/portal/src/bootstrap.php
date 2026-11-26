@@ -31,7 +31,8 @@ function csrf_token(): string
 
 function csrf_check(): void
 {
-    if (!hash_equals(csrf_token(), (string) ($_POST['csrf'] ?? ''))) {
+    $token = (string) ($_POST['csrf'] ?? $_POST['csrf_token'] ?? '');
+    if (!hash_equals(csrf_token(), $token)) {
         http_response_code(400);
         exit('Formulário expirado. Volte e tente de novo.');
     }

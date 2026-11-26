@@ -170,10 +170,10 @@ final class AdminApi
 
         // Itens com mapeamento de nomes e ícones do catálogo
         $items = $this->db->all('
-            SELECT id, template_id, count, place
+            SELECT id, template_id, count, pos
             FROM items
             WHERE character_id = ? AND count > 0
-            ORDER BY place ASC LIMIT 80
+            ORDER BY pos ASC LIMIT 80
         ', [$id]);
 
         $catalog = $this->getItemsCatalog();
@@ -185,7 +185,8 @@ final class AdminApi
                 'id' => (int) $it['id'],
                 'template_id' => $tid,
                 'count' => (int) $it['count'],
-                'place' => (int) $it['place'],
+                'place' => (int) $it['pos'],
+                'pos' => (int) $it['pos'],
                 'name' => $meta['name'] ?? ('Item #' . $tid),
                 'icon' => $meta['icon'] ?? '0',
                 'quality' => (int) ($meta['quality'] ?? 1),
@@ -419,12 +420,13 @@ final class AdminApi
 
         $sentCount = 0;
         foreach ($receivers as $rcvId) {
-            $this->db->exec('
+            $inserted = $this->db->one('
                 INSERT INTO mails (receiver_id, sender_id, sender_nick, sender_grades, mail_type, send_type, title, contents, sent_at, validity_days)
                 VALUES (?, 0, ?, 100, 1, 1, ?, ?, NOW(), 30)
+                RETURNING id
             ', [$rcvId, $senderNick, $title, $contents]);
 
-            $mailId = (int) $this->db->one('SELECT currval(pg_get_serial_sequence(\'mails\', \'id\')) as id')['id'];
+            $mailId = (int) ($inserted['id'] ?? $this->db->lastInsertId('mails_id_seq'));
 
             foreach ($annexes as $anx) {
                 $this->db->exec('
