@@ -63,6 +63,11 @@ document.getElementById("ruffle").onclick = () => {
     window.RufflePlayer = window.RufflePlayer || {};
     window.RufflePlayer.config = {
         maxExecutionDuration: 300, // o setup do core.swf passa dos 15s padrão
+        autoplay: "on",
+        unmuteOverlay: "hidden",
+        splashScreen: false,
+        letterbox: "on",
+        warnOnUnsupportedContent: false,
         socketProxy: [game.socket.host, "127.0.0.1", "localhost"].map(host => ({ host, port: game.socket.port, proxyUrl: game.socket.proxy })),
     };
     document.getElementById("panel").style.display = "none";
