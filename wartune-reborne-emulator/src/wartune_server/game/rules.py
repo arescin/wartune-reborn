@@ -880,6 +880,10 @@ def quest_done(snap: PlayerSnapshot, templates: GameTemplates, q: Quest, now: da
             have = goods_count(snap, int(cond["Para1"]))
         elif kind == GUILD_JOIN_CONDITION:
             have = int(in_guild)
+        elif kind == CATACOMBS_CONDITION:
+            # Cliente Flash (TaskTemplate.checkCount) lê progress_of(q, k) >= 1 para completar
+            have = progress_of(q, k)
+            need = min(need, 1)
         else:
             have = progress_of(q, k)
         if have < need:

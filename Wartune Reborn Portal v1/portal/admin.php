@@ -869,7 +869,7 @@ $csrfToken = csrf_token();
                 if (inv.length > 0) {
                     invContainer.innerHTML = inv.map(i => `
                         <div class="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center gap-2" title="${i.name} (Qtd: ${i.count})">
-                            <img src="https://wartune-cdn.thnsdu.easypanel.host/game/icon/${i.icon}.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'24\\' height=\\'24\\'><rect width=\\'24\\' height=\\'24\\' fill=\\'%23334155\\'/></svg>'" class="w-8 h-8 rounded border border-slate-700 object-contain shrink-0">
+                            <img src="https://wartune-cdn.thnsdu.easypanel.host/icon/${i.icon}.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'24\\' height=\\'24\\'><rect width=\\'24\\' height=\\'24\\' fill=\\'%23334155\\'/></svg>'" class="w-8 h-8 rounded border border-slate-700 object-contain shrink-0">
                             <div class="min-w-0 truncate">
                                 <p class="text-xs font-semibold text-slate-200 truncate">${i.name}</p>
                                 <p class="text-[10px] text-slate-400 font-mono">x${i.count}</p>
@@ -1086,7 +1086,7 @@ $csrfToken = csrf_token();
                         dropdown.innerHTML = items.map(it => `
                             <div class="p-2 hover:bg-slate-800 cursor-pointer flex items-center gap-2.5 transition"
                                 onclick="selectMailItem(${slotId}, ${it.id}, '${escapeJs(it.name)}', '${it.icon}')">
-                                <img src="https://wartune-cdn.thnsdu.easypanel.host/game/icon/${it.icon}.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'20\\' height=\\'20\\'><rect width=\\'20\\' height=\\'20\\' fill=\\'%23334155\\'/></svg>'" class="w-6 h-6 rounded border border-slate-700 object-contain">
+                                <img src="https://wartune-cdn.thnsdu.easypanel.host/icon/${it.icon}.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'20\\' height=\\'20\\'><rect width=\\'20\\' height=\\'20\\' fill=\\'%23334155\\'/></svg>'" class="w-6 h-6 rounded border border-slate-700 object-contain">
                                 <div class="min-w-0 truncate">
                                     <p class="text-xs font-semibold text-slate-200 truncate">${it.name}</p>
                                     <p class="text-[10px] text-slate-500 font-mono">ID: ${it.id}</p>
@@ -1114,7 +1114,7 @@ $csrfToken = csrf_token();
             const iconEl = document.getElementById('icon-slot-' + slotId);
             const nameEl = document.getElementById('name-slot-' + slotId);
 
-            iconEl.src = `https://wartune-cdn.thnsdu.easypanel.host/game/icon/${icon}.png`;
+            iconEl.src = `https://wartune-cdn.thnsdu.easypanel.host/icon/${icon}.png`;
             nameEl.innerText = `${name} (ID: ${templateId})`;
             preview.classList.remove('hidden');
         }

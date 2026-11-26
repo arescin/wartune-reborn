@@ -90,6 +90,8 @@ class GameHttpApi:
         if self._d.settings.gm_secret:  # sem segredo a rota nem existe (a porta é pública)
             r.add_post("/gm/kick", self.gm_kick)
             r.add_post("/gm/ban", self.gm_ban)
+            r.add_post("/gm/notify_mail", self.gm_notify_mail)
+            r.add_post("/gm/recharge", self.gm_recharge)
 
     # -- jogo --------------------------------------------------------------------------
     async def crossdomain(self, _: web.Request) -> web.Response:
@@ -196,6 +198,32 @@ class GameHttpApi:
             return web.json_response({"ok": False, "error": "a sessão não terminou a tempo"}, status=503)
         log.info("conta banida" if banned else "conta desbanida", conta=account_id)
         return web.json_response({"ok": True})
+
+    async def gm_notify_mail(self, request: web.Request) -> web.Response:
+        """Portal: avisa o jogador online via pacote 148 em tempo real."""
+        if not self._gm_allowed(request):
+            return web.json_response({"ok": False, "error": "segredo inválido"}, status=403)
+        try:
+            params = await _params(request)
+            character_id = _int(params, "character_id")
+            mail_id = int(params.get("mail_id", 0))
+            notified = self._d.online.notify_mail(character_id, mail_id)
+        except ValidationError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        return web.json_response({"ok": True, "notified": notified})
+
+    async def gm_recharge(self, request: web.Request) -> web.Response:
+        """Portal: credita Balens na sessão ativa e envia pacote 3 em tempo real."""
+        if not self._gm_allowed(request):
+            return web.json_response({"ok": False, "error": "segredo inválido"}, status=403)
+        try:
+            params = await _params(request)
+            character_id = _int(params, "character_id")
+            amount = _int(params, "amount")
+            notified = self._d.online.notify_recharge(character_id, amount)
+        except ValidationError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        return web.json_response({"ok": True, "notified": notified})
 
     async def plain_true(self, _: web.Request) -> web.Response:
         return web.Response(text="true")

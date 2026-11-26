@@ -434,6 +434,19 @@ final class AdminApi
                     VALUES (?, ?, ?, ?, false, 0)
                 ', [$mailId, $anx['slot'], $anx['template_id'], $anx['count']]);
             }
+
+            // Notifica em tempo real se o servidor estiver rodando
+            $char = $this->db->one('SELECT server_id FROM characters WHERE id = ?', [$rcvId]);
+            if ($char) {
+                $server = $this->db->one('SELECT * FROM game_servers WHERE id = ?', [$char['server_id']]);
+                if ($server) {
+                    $this->callGm($server, '/gm/notify_mail', [
+                        'character_id' => $rcvId,
+                        'mail_id' => $mailId,
+                    ]);
+                }
+            }
+
             $sentCount++;
         }
 

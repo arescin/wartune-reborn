@@ -105,6 +105,26 @@ class OnlinePlayers:
         if self._by_id.get(player_id) is session:
             del self._by_id[player_id]
 
+    def notify_mail(self, player_id: int, mail_id: int = 0) -> bool:
+        session = self._by_id.get(player_id)
+        if session is not None:
+            from .mail import S_NEW_MAIL
+            from ..protocol.messages import wartune_pb2 as pb
+            session.send(S_NEW_MAIL, pb.MailMsg(playerId=player_id, mailId=mail_id))
+            return True
+        return False
+
+    def notify_recharge(self, player_id: int, amount: int) -> bool:
+        session = self._by_id.get(player_id)
+        if session is not None and session.snapshot is not None:
+            from .handlers.login import player_info
+            from .handlers import builder as b
+            c = session.snapshot.character
+            c.point += amount
+            session.send(3, b.complete(player_info(session, session.snapshot)))
+            return True
+        return False
+
     async def kick(self, player_id: int) -> None:
         """Derruba a sessão e espera ela terminar (o handler em andamento conclui e salva antes).
 
