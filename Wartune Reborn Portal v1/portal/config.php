@@ -14,7 +14,7 @@ $serverHttpUrl = getenv('WARTUNE_SERVER_HTTP_URL') ?: '';
 $ticketTtl = (int) (getenv('WARTUNE_TICKET_TTL') ?: 300);
 $gmSecret = getenv('WARTUNE_GM_SECRET') ?: '';
 $gmUsersEnv = getenv('WARTUNE_GM_USERS');
-$gmUsers = ($gmUsersEnv !== false && $gmUsersEnv !== '') ? array_map('trim', explode(',', $gmUsersEnv)) : ['admin'];
+$gmUsers = ($gmUsersEnv !== false && $gmUsersEnv !== '') ? array_map('trim', explode(',', $gmUsersEnv)) : ['admin', 'Arescin', 'ArescinBR'];
 
 return [
     // Mesmo banco do servidor do jogo (WARTUNE_DATABASE_URL). Exemplos:

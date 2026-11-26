@@ -5,7 +5,8 @@ require_once __DIR__ . '/src/Admin.php';
 require_once __DIR__ . '/src/AdminApi.php';
 
 $me = current_account();
-if (!$me || !in_array($me['username'], $CONFIG['gm_users'] ?? [], true)) {
+$allowedGmUsers = array_map('strtolower', $CONFIG['gm_users'] ?? ['admin', 'arescin', 'arescinbr']);
+if (!$me || !in_array(strtolower($me['username']), $allowedGmUsers, true)) {
     http_response_code(403);
     echo '<!DOCTYPE html><html lang="pt-BR" class="dark"><head><meta charset="UTF-8"><title>Acesso Restrito</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-slate-950 text-slate-200 flex items-center justify-center min-h-screen"><div class="bg-slate-900 border border-red-500/30 p-8 rounded-2xl max-w-md text-center shadow-2xl"><h1 class="text-2xl font-bold text-red-400 mb-2">Acesso Negado</h1><p class="text-slate-400 mb-6">Esta área é exclusiva para Administradores e Game Masters (GM).</p><a href="index.php" class="inline-block px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition">Voltar ao Portal</a></div></body></html>';
     exit;
