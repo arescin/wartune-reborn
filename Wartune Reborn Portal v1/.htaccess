@@ -1,0 +1,11 @@
+RewriteEngine On
+
+# Não reescrever se o arquivo ou diretório existir diretamente na raiz
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Se o arquivo ou diretório existir dentro de portal/, reescrever internamente
+RewriteCond %{DOCUMENT_ROOT}/portal/$1 -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/portal/$1 -d
+RewriteRule ^(.*)$ portal/$1 [L,QSA]
