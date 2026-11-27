@@ -5,6 +5,12 @@ MD5 de cada entrada para decidir o que precisa buscar. Se um arquivo da lista n�
 existir, o Nginx da CDN devolve o ``empty.swf``/``empty.png`` com HTTP 200 e o jogo
 trava sem erro visível — por isso a conferência tem que ser por MD5, não por status.
 
+Os arquivos da CDN não são SWF/PNG crus: vêm num envelope da 7road formado por
+``road7`` + 32 caracteres com o MD5 do conteúdo + o conteúdo. O ``MD5Installer`` do
+``Loading.swf`` descarta esse cabeçalho de 37 bytes antes do ``loadBytes``, então o
+MD5 do ``resouececheck.sq`` é o do **conteúdo**, nunca o do arquivo inteiro. Um
+arquivo sem envelope é carregado com 37 bytes a menos e quebra sem mensagem.
+
 Uso::
 
     python tools/auditar_cliente.py --base https://wartune-cdn.thnsdu.easypanel.host
@@ -28,6 +34,9 @@ BASE_PADRAO = "https://wartune-cdn.thnsdu.easypanel.host"
 BOOTSTRAP = "/game/client/resouececheck.sq"
 # Placeholders que o Nginx devolve no lugar de um arquivo ausente.
 VAZIOS = ("/empty.swf", "/empty.png", "/empty.mp3", "/empty.xml")
+# Envelope da 7road: "road7" + 32 caracteres de MD5 do conteúdo.
+MARCA = b"road7"
+CABECALHO = len(MARCA) + 32
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,15 +54,21 @@ class Achado:
     esperado: Esperado
     status: int
     tamanho: int
-    md5: str
+    declarado: str
+    conteudo: str
 
     @property
     def situacao(self) -> str:
         if self.status != 200:
             return "ausente"
-        if self.md5 == self.esperado.md5:
-            return "ok"
-        return "divergente"
+        if not self.declarado:
+            return "sem envelope"
+        if self.declarado != self.esperado.md5:
+            return "versão diferente"
+        if self.conteudo != self.declarado:
+            return "conteúdo adulterado"
+        return "ok"
+
 
 
 def baixar(url: str, tempo: int = 60) -> tuple[int, bytes]:
@@ -98,45 +113,45 @@ def placeholders(base: str) -> dict[str, str]:
 
 def conferir(base: str, item: Esperado, vazios: dict[str, str]) -> Achado:
     status, corpo = baixar(base + item.caminho)
-    digest = hashlib.md5(corpo).hexdigest() if corpo else ""
-    if status == 200 and digest in vazios:
+    if status == 200 and corpo and hashlib.md5(corpo).hexdigest() in vazios:
         status = 404  # placeholder do Nginx: o arquivo não existe de verdade
-    return Achado(item, status, len(corpo), digest)
+    declarado = ""
+    conteudo = ""
+    if corpo[: len(MARCA)] == MARCA:
+        declarado = corpo[len(MARCA) : CABECALHO].decode("latin1").lower()
+        conteudo = hashlib.md5(corpo[CABECALHO:]).hexdigest()
+    return Achado(item, status, len(corpo), declarado, conteudo)
 
 
 def relatorio(base: str, achados: list[Achado]) -> str:
-    ausentes = [a for a in achados if a.situacao == "ausente"]
-    divergentes = [a for a in achados if a.situacao == "divergente"]
+    quebrados = [a for a in achados if a.situacao != "ok"]
     total = len(achados)
-    ok = total - len(ausentes) - len(divergentes)
+    ok = total - len(quebrados)
     linhas = [
         "# Integridade do cliente Flash",
         "",
         f"Origem: `{base}{BOOTSTRAP}`",
         "",
         f"- Arquivos exigidos pelo `resouececheck.sq`: **{total}**",
-        f"- Conferem pelo MD5: **{ok}** ({ok / total:.2%})" if total else "- lista vazia",
-        f"- Ausentes (ou servidos como placeholder vazio): **{len(ausentes)}**",
-        f"- Presentes com MD5 diferente: **{len(divergentes)}**",
+        f"- Íntegros: **{ok}** ({ok / total:.2%})" if total else "- lista vazia",
+        f"- Com problema: **{len(quebrados)}**",
         "",
     ]
-    if ausentes:
-        linhas += ["## Ausentes", "", "| arquivo |", "| --- |"]
-        linhas += [f"| `{a.esperado.nome}` |" for a in ausentes]
-        linhas.append("")
-    if divergentes:
+    if quebrados:
         linhas += [
-            "## MD5 diferente",
+            "## Problemas",
             "",
-            "| arquivo | esperado | obtido | bytes |",
-            "| --- | --- | --- | ---: |",
+            "| arquivo | situação | esperado | declarado | conteúdo | bytes |",
+            "| --- | --- | --- | --- | --- | ---: |",
         ]
         linhas += [
-            f"| `{a.esperado.nome}` | `{a.esperado.md5}` | `{a.md5}` | {a.tamanho} |"
-            for a in divergentes
+            f"| `{a.esperado.nome}` | {a.situacao} | `{a.esperado.md5}` |"
+            f" `{a.declarado or '-'}` | `{a.conteudo or '-'}` | {a.tamanho} |"
+            for a in quebrados
         ]
         linhas.append("")
     return "\n".join(linhas)
+
 
 
 def main(argv: list[str] | None = None) -> int:
