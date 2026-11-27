@@ -49,21 +49,23 @@ class FakeFlashClient:
 
 
 async def run_live_test() -> None:
-    http_base = "https://wartune-server.thnsdu.easypanel.host"
+    portal_base = "https://bots-wartune-portal.thnsdu.easypanel.host"
+    server_base = "https://bots-wartune-server.thnsdu.easypanel.host"
     tcp_host = "179.198.96.49"
     tcp_port = 5000
 
     print("=" * 65)
     print("TESTE DE HOMOLOGAÇÃO REAL — WARTUNE REBORN NA VPS HOSTINGER")
-    print(f"Alvo HTTP: {http_base}")
+    print(f"Portal: {portal_base}")
+    print(f"Server: {server_base}")
     print(f"Alvo TCP : {tcp_host}:{tcp_port}")
     print("=" * 65)
 
     async with aiohttp.ClientSession() as session:
         # 1. Obter config.xml e extrair chave pública RSA
         print("\n[Etapa 1/6] Obtendo config.xml do servidor...")
-        async with session.get(f"{http_base}/config.xml") as resp:
-            assert resp.status == 200, f"HTTP {resp.status} em /config.xml"
+        async with session.get(f"{portal_base}/client-config.php?server=1") as resp:
+            assert resp.status == 200, f"HTTP {resp.status} em /client-config.php"
             xml_text = await resp.text()
             root = ET.fromstring(xml_text)
             rsa_node = root.find(".//RSAKey")
@@ -82,7 +84,7 @@ async def run_live_test() -> None:
         # 2. Gerar conta e ticket via API de autenticação
         test_user = f"Live_{int(time.time()) % 10000}"
         print(f"\n[Etapa 2/6] Registrando conta de teste e emitindo ticket para '{test_user}'...")
-        async with session.post(f"{http_base}/api/auth", data={"username": test_user}) as resp:
+        async with session.post(f"{server_base}/api/auth", data={"username": test_user}) as resp:
             assert resp.status == 200, f"HTTP {resp.status} em /api/auth"
             auth_data = await resp.json()
             assert auth_data.get("ok"), f"Auth falhou: {auth_data}"
@@ -100,7 +102,7 @@ async def run_live_test() -> None:
         b64_cipher = base64.b64encode(cipher_bytes).decode("ascii")
 
         async with session.post(
-            f"{http_base}/login",
+            f"{server_base}/login",
             data={"p": b64_cipher, "site": "local_0001"}
         ) as resp:
             assert resp.status == 200, f"HTTP {resp.status} em /login"
@@ -113,7 +115,7 @@ async def run_live_test() -> None:
         print("\n[Etapa 4/6] Registrando personagem (/visualizeregister)...")
         hero_nick = f"H{int(time.time()) % 10000}"
         async with session.post(
-            f"{http_base}/visualizeregister",
+            f"{server_base}/visualizeregister",
             data={
                 "userid": user_id,
                 "username": test_user,
@@ -130,7 +132,7 @@ async def run_live_test() -> None:
 
         # Atualizar novice para liberar castelo
         async with session.post(
-            f"{http_base}/updateplayernovice",
+            f"{server_base}/updateplayernovice",
             data={"op": 1, "userid": user_id, "noviceprocess": 0, "key": key}
         ) as resp:
             assert resp.status == 200

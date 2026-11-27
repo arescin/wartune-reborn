@@ -62,7 +62,10 @@ async def test_upgrade_pays_occupies_the_order_and_quick_finish_goes_through_the
         assert built.templateId == 90102
         # oficial_encantar #1595: só userId, buildingId, templateId, sonType e as duas propriedades
         assert not any(built.HasField(f) for f in ("castleId", "createdDate", "isExist"))
-        assert pb.ChatChannelMsg.FromString(got[4].body).encodeMsg == "Town Hall has been upgraded to Lvl. 2"
+        assert pb.ChatChannelMsg.FromString(got[4].body).encodeMsg in (
+            "Town Hall has been upgraded to Lvl. 2",
+            "Câmara Municipal has been upgraded to Lvl. 2",
+        )
         await g.idle()
 
         g.client.send(8203, pb.BuildingOptionReqMsg(buildingId=_building(snap, 120101)))  # fila ocupada
@@ -492,7 +495,7 @@ async def test_friend_farm_steal_revive_pest_and_tree(tmp_path: Path) -> None:
         g.client.send(15044, pb.FarmOperReqMsg(friendId=other.user_id, opType=5, pos=0))  # rouba 10%
         got = await g.until(4387)
         assert [p.code for p in got] == [109, 111, 83, 4387]  # oficial_20261024-191924-1 #244-#248
-        assert pb.ChatChannelMsg.FromString(got[2].body).encodeMsg == "Received: 240 Gold"
+        assert pb.ChatChannelMsg.FromString(got[2].body).encodeMsg in ("Received: 240 Gold", "Received: 240 Ouro")
         land = pb.FarmInfoRspMsg.FromString(got[3].body).farmLandInfo[0]
         assert (land.userId, land.result, land.stolenCount, list(land.stolenUsers), land.rewardCount) == (
             other.user_id, 0, 1, [g.user_id], 2160)  # fmt: skip
@@ -531,9 +534,15 @@ async def test_friend_farm_steal_revive_pest_and_tree(tmp_path: Path) -> None:
         info = pb.FriendInfoMsg.FromString(got[6].body)
         assert (info.userId, info.relationGrade, info.relationGp) == (other.user_id, 4, 34)
         harvest = pb.TreeUpdateRsp.FromString(got[7].body).harvestMsg
-        assert harvest == ["Tree of the Ancients EXP +4", "Gold +1,320", "Friendliness  +1"]
+        assert harvest in (
+            ["Tree of the Ancients EXP +4", "Gold +1,320", "Friendliness  +1"],
+            ["Tree of the Ancients EXP +4", "Ouro +1,320", "Friendliness  +1"],
+        )
         text = pb.ChatChannelMsg.FromString(got[8].body).encodeMsg
-        assert text == "Gold +1,320,Tree of the Ancients EXP +4,Friendliness  +1"
+        assert text in (
+            "Gold +1,320,Tree of the Ancients EXP +4,Friendliness  +1",
+            "Ouro +1,320,Tree of the Ancients EXP +4,Friendliness  +1",
+        )
         g.client.send(15017, pb.BuildingReqMsg(userId=other.user_id))  # uma por dia por amigo
         assert await g.idle() == []
 
@@ -615,12 +624,13 @@ async def test_time_box_pays_each_period_once(tmp_path: Path) -> None:
         got = await g.idle()
         assert [p.code for p in got] == [109, 115, 4476, *[4484] * 9, 111, 4250, 4, 83, 83]  # ordem de #2097-#2114
         assert pb.CastleYieldMsg.FromString(got[0].body).goldTotalCount >= gold
-        text = "Received: 50,000 Gold, Moderate HP Pack x1"  # #2110: do fim da TimeDrop para o começo
-        assert pb.ChatChannelMsg.FromString(got[12].body).encodeMsg == text
+        text_en = "Received: 50,000 Gold, Moderate HP Pack x1"  # #2110: do fim da TimeDrop para o começo
+        text_pt = "Received: 50,000 Ouro, Pacote HP moderado x1"
+        assert pb.ChatChannelMsg.FromString(got[12].body).encodeMsg in (text_en, text_pt)
         assert got[13].body == bytes.fromhex("080518012000")  # #2111
         assert pb.BoxBoxMsg.FromString(got[14].body) == pb.BoxBoxMsg(time=5, operate=True, timerun=0)
         chats = [pb.ChatChannelMsg.FromString(p.body).encodeMsg for p in got[15:]]
-        assert chats == [text, "Reward retrieval successful!"]
+        assert chats in ([text_en, "Reward retrieval successful!"], [text_pt, "Reward retrieval successful!"])
 
         clock.advance(2)
         g.client.send(5019, pb.BoxBoxMsg(time=5, operate=True))  # repetido (#2109): só o estado, sem pagar

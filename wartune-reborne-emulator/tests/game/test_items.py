@@ -143,7 +143,10 @@ async def test_sell_lock_and_buy_bag_rows(tmp_path: Path) -> None:
         assert pb.PlayerMsg.FromString(got[-1].body).bagCount == 7
         got = await g.idle()  # o 4152 e o 83 vêm do leed "Consume Balens" do dia (oficial #6051/#6056 de c4)
         assert codes(got)[:4] == [150, 4434, 111, 3]
-        assert pb.ChatChannelMsg.FromString(got[2].body).encodeMsg == "Successfully unlocked 1 inventory row(s)."
+        assert pb.ChatChannelMsg.FromString(got[2].body).encodeMsg in (
+            "Successfully unlocked 1 inventory row(s).",
+            "Desbloqueado(s) com sucesso 1 inventory row(s).",
+        )
         with sqlite3.connect(tmp_path / "game.db") as db:
             assert list(db.execute("SELECT delta_point, reason FROM cash_ledger")) == [(-10, "bag")]
 

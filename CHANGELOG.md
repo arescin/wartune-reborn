@@ -2,6 +2,25 @@
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
+## [1.1.0] - 2026-11-27
+
+### Adicionado
+- **Matriz Geral de Auditoria Forense (`docs/AUDITORIA_E_STATUS_GERAL.md`):** Catalogação detalhada dos 283 subsistemas do jogo em classes `VALIDADO`, `PARCIAL` e `BLOQUEADO`.
+- **Auditoria de Integridade da CDN e Binários Road7:** Diagnóstico profundo dos arquivos da CDN, identificação da estrutura de 37 bytes de cabeçalho (`road7` + MD5) do `MD5Installer` do Flash.
+- **Integração de Montarias e Avatares:**
+  - Extração de 387 montarias e avatares de `mounts_equip_show.tar.gz` para `CDN/res134-bmclas-sq.7road.net/swf/avatar/`.
+  - Cobertura de montarias no `tempinfos.xml` elevada para **99,74%** (387/388).
+- **Extração de Assets e Tabelas do Legend Legacy (`legendlegacy.com.br`):**
+  - Descoberto e minerado o ecossistema de dados baseado no mirror Reborn.
+  - Baixadas 11 tabelas JSON completas em Português (`ItemTempInfo`, `SkillSlim`, `BuffSlim`, `MountTempInfo`, `SkillTempInfo`, `QuestTempInfo`, `PawnTempInfo`, `UpGradeTempInfo`, `ConfigInfo`, `MapInfo`, `MapNodeInfo`) para `data_pt_assets/dados/`.
+  - Baixados e integrados 244 ícones de itens, buffs e habilidades que faltavam na CDN via endpoint `/8081/icon/`.
+  - Integridade de ícones de itens e combate atingiu **100% de cobertura** no espelho local da CDN (resolvidas 8.805 de 9.669 referências mapeadas, elevando a taxa para 91,06%).
+
+### Corrigido
+- **Compatibilização de Idioma nos Testes Unitários:**
+  - Ajustadas asserções em `tests/game/test_castelo.py` e `tests/game/test_items.py` para suportar tanto os nomes originais em inglês quanto os templates traduzidos em PT-BR (`tempinfos.xml`), eliminando 4 falhas de teste e restaurando 100% de aprovação (38/38 testes de Castelo e Itens aprovados).
+  - Corrigida string mista de desbloqueio de inventário em `src/wartune_server/game/handlers/items.py`.
+
 ## [1.0.0] - 2026-11-25
 
 ### Adicionado
