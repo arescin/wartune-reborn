@@ -628,19 +628,29 @@ def add_gp(snap: PlayerSnapshot, templates: GameTemplates, gp: int) -> int:
     c, leader = snap.character, snap.leader
     c.total_gp += gp
     grade, floor = 1, 0
-    for g, need in grade_steps(templates):
+    steps = grade_steps(templates)
+    for g, need in steps:
         if c.total_gp < need:
             break
         grade, floor = g, need
-    gained = grade - c.grades
-    c.grades, c.gp = grade, c.total_gp - floor
-    if leader is not None and gained > 0:
+    # Se o nível atual do personagem já for maior que o nível calculado pela EXP
+    # (ex: definido pelo painel admin/GM), preserva o nível e ajusta o piso da EXP
+    if c.grades > grade:
+        grade = c.grades
+        floor = next((need for g, need in steps if g == grade), floor)
+        if c.total_gp < floor:
+            c.total_gp = floor
+    gained = max(0, grade - c.grades)
+    c.grades, c.gp = grade, max(0, c.total_gp - floor)
+    if leader is not None and (leader.grades < grade or gained > 0):
+        level_diff = grade - leader.grades
         leader.grades = grade
         leader.hp = 0  # subir de nível enche a vida sem a reserva (oficial_20261023-153200-1 #2132: 530 -> 560)
         refresh_skill_point(leader, templates)
-        for attr, per_level in GROWTH[job_type(c.job)].items():
-            setattr(leader, attr, getattr(leader, attr) + per_level * gained)
-            setattr(leader, f"{attr}_point", getattr(leader, f"{attr}_point") + per_level * gained)
+        if level_diff > 0:
+            for attr, per_level in GROWTH[job_type(c.job)].items():
+                setattr(leader, attr, getattr(leader, attr) + per_level * level_diff)
+                setattr(leader, f"{attr}_point", getattr(leader, f"{attr}_point") + per_level * level_diff)
         top_up_army(snap, templates)
     return gained
 
@@ -775,6 +785,7 @@ def accept_quest(
         snap.quests.append(q)
     else:
         q.completed, q.added_at = False, now
+        q.completed_at = None
         q.progress = q.progress_2 = q.progress_3 = q.progress_4 = 0
     changed = [q, *update_novice_quests(snap, templates), *update_building_quests(snap, templates)]
     changed += update_state_quests(snap, templates, [q])

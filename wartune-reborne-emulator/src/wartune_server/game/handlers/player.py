@@ -341,8 +341,11 @@ async def quest_finish(s: GameSession, msg: pb.QuestFinishedReqMsg) -> None:
     mine = s.ctx.guilds.of(s.player_id)
     guild = mine[0] if mine is not None else None
     q = rules.quest(snap, msg.templateId)
-    if q is None or q.completed:
+    if q is None:
         s.log.info("5014 sem missão aberta", quest=msg.templateId)
+        return
+    if q.completed:
+        s.send(S_QUEST_DONE, pb.QuestFinishedRspMsg(templateId=q.template_id))
         return
     # estado que o cliente confere sozinho (amigos, guilda, contribuição, nível da guilda, bolsa): atualiza antes
     rules.update_state_quests(snap, templates, [q])

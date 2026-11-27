@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     text,
@@ -114,6 +115,10 @@ def _int(name: str, default: int = 0) -> Column[int]:
     return Column(name, Integer, nullable=False, default=default, server_default=str(default))
 
 
+def _bigint(name: str, default: int = 0) -> Column[int]:
+    return Column(name, BigInteger, nullable=False, default=default, server_default=str(default))
+
+
 def _str(name: str, size: int = 255, default: str = "") -> Column[str]:
     return Column(name, String(size), nullable=False, default=default, server_default=default)
 
@@ -175,8 +180,8 @@ characters = Table(
     _int("job"),
     Column("active", Boolean, nullable=False, default=False, server_default="0"),
     _int("grades", 1),
-    _int("gp"),
-    _int("total_gp"),
+    _bigint("gp"),
+    _bigint("total_gp"),
     _int("gold"),
     _int("point"),
     _int("gift_token"),
@@ -251,7 +256,7 @@ heroes = Table(
     Column("template_id", Integer, nullable=False),
     Column("nickname", String(32), nullable=False),
     _int("grades", 1),
-    _int("gp"),
+    _bigint("gp"),
     _int("power"),
     _int("agility"),
     _int("intellect"),
@@ -1097,12 +1102,12 @@ player_systems = Table(
     Column("character_id", Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, unique=True),
     _int("mount_template"),
     _str("mount_gp", 64, "0,0,0,0"),
-    _str("mount_avatars", 1024),
-    _str("mount_expiry", 1024),
-    _str("mount_fly", 1024),
-    _str("mount_stars", 1024),
-    _str("mount_since", 1024),
-    _str("battle_guard", 255),
+    _text("mount_avatars"),
+    _text("mount_expiry"),
+    _text("mount_fly"),
+    _text("mount_stars"),
+    _text("mount_since"),
+    _text("battle_guard"),
     _int("dragon_type"),
     _int("dragon_grade"),
     _int("dragon_gp"),

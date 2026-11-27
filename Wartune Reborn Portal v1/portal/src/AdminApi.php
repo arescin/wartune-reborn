@@ -200,6 +200,17 @@ final class AdminApi
         ];
     }
 
+    public const GRADE_TOTAL_GP = [
+        1 => 0, 2 => 3000, 3 => 7000, 4 => 12000, 5 => 18000, 6 => 25000, 7 => 33000, 8 => 42000, 9 => 52800, 10 => 66800,
+        11 => 84800, 12 => 106800, 13 => 134800, 14 => 168800, 15 => 208800, 16 => 253800, 17 => 303800, 18 => 358800, 19 => 418800, 20 => 483800,
+        21 => 553800, 22 => 663800, 23 => 813800, 24 => 1033800, 25 => 1303800, 26 => 1623800, 27 => 2002060, 28 => 2457900, 29 => 3051000, 30 => 3791400,
+        31 => 4745500, 32 => 5989116, 33 => 7439070, 34 => 9107990, 35 => 11008900, 36 => 13324180, 37 => 16148092, 38 => 19285660, 39 => 22868392, 40 => 26919832,
+        41 => 31986232, 42 => 37777810, 43 => 43883728, 44 => 50315582, 45 => 57085202, 46 => 65281052, 47 => 74523096, 48 => 85194380, 49 => 97308652, 50 => 111879912,
+        51 => 126885812, 52 => 142809440, 53 => 159380445, 54 => 177232961, 55 => 196412276, 56 => 218705396, 57 => 242500245, 58 => 267844865, 59 => 294788216, 60 => 323380176,
+        61 => 353671541, 62 => 391736105, 63 => 431824740, 64 => 473990996, 65 => 518289341, 66 => 564775161, 67 => 613504760, 68 => 664535360, 69 => 717925101, 70 => 773733041,
+        71 => 831773299, 72 => 907225635, 73 => 1005313672, 74 => 1132828121, 75 => 1298596905, 76 => 1506015097, 77 => 1768655016, 78 => 2096429635, 79 => 2510700335, 80 => 3033865047
+    ];
+
     private function editCharacter(int $charId, array $post): array
     {
         $char = $this->db->one('SELECT * FROM characters WHERE id = ?', [$charId]);
@@ -212,8 +223,12 @@ final class AdminApi
             $this->callGm($server, '/gm/kick', ['character_id' => $charId]);
         }
 
+        $newGrade = max(1, min(100, (int) ($post['grades'] ?? $char['grades'])));
+        $neededTotalGp = self::GRADE_TOTAL_GP[$newGrade] ?? 3033865047;
+
         $fields = [
-            'grades' => max(1, min(100, (int) ($post['grades'] ?? $char['grades']))),
+            'grades' => $newGrade,
+            'total_gp' => max($neededTotalGp, (int) ($char['total_gp'] ?? 0)),
             'gold' => max(0, min(2000000000, (int) ($post['gold'] ?? $char['gold']))),
             'point' => max(0, min(2000000000, (int) ($post['point'] ?? $char['point']))),
             'gift_token' => max(0, min(2000000000, (int) ($post['gift_token'] ?? $char['gift_token']))),
@@ -222,6 +237,10 @@ final class AdminApi
             'gp' => max(0, (int) ($post['gp'] ?? $char['gp'])),
             'fighting_capacity' => max(0, (int) ($post['fight_capacity'] ?? $char['fighting_capacity'])),
         ];
+
+        if ($newGrade !== (int) $char['grades']) {
+            $fields['total_gp'] = $neededTotalGp;
+        }
 
         $sets = [];
         $params = [];
@@ -232,6 +251,10 @@ final class AdminApi
         $params[] = $charId;
 
         $this->db->exec('UPDATE characters SET ' . implode(', ', $sets) . ' WHERE id = ?', $params);
+
+        // Sincroniza herói líder para manter nível e atributos coerentes
+        $this->db->exec('UPDATE heroes SET grades = ? WHERE character_id = ? AND is_leader = TRUE', [$newGrade, $charId]);
+
         return ['updated' => true, 'character_id' => $charId];
     }
 

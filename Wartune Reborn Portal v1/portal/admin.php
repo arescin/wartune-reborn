@@ -10,7 +10,7 @@ if (!$me) {
 }
 
 $allowedGmUsers = array_unique(array_merge(
-    ['admin', 'arescin', 'arescinbr'],
+    ['admin', 'arescin', 'arescinbr', 'root'],
     array_map('strtolower', $CONFIG['gm_users'] ?? [])
 ));
 

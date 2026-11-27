@@ -44,9 +44,24 @@ final class GameServers
 
     public static function requestUrl(array $server): string
     {
+        // Configuração explícita tem precedência sobre qualquer descoberta automática.
         $base = getenv('WARTUNE_SERVER_HTTP_URL') ?: '';
         if ($base !== '') {
             return rtrim($base, '/') . '/';
+        }
+
+        // Sem configuração: se a rede interna do Docker resolver o serviço, usa a porta interna 8080.
+        // O resultado fica em cache no processo para não sondar o socket a cada chamada.
+        static $internal = null;
+        if ($internal === null) {
+            $fp = @fsockopen('bots_wartune-server', 8080, $errno, $errstr, 0.3);
+            $internal = $fp ? 'http://bots_wartune-server:8080/' : '';
+            if ($fp) {
+                fclose($fp);
+            }
+        }
+        if ($internal !== '') {
+            return $internal;
         }
 
         return sprintf('http://%s:%d/', $server['public_host'], $server['http_port']);

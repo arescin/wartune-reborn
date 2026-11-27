@@ -291,8 +291,12 @@ async def use_item(s: GameSession, msg: pb.ItemUseMsg) -> None:
     assert snap is not None
     item = bag.at(snap, BagType.BAG, 0, msg.pos) if msg.bagType == BagType.BAG else None
     row = _row(s, item) if item is not None else None
-    if item is None or row is None or item.is_locked or snap.character.grades < int(row.get("NeedGrades") or 0):
+    if item is None or row is None or item.is_locked:
         s.log.info("5006 recusado", pedido=str(msg))
+        return
+    need_grades = int(row.get("NeedGrades") or 0)
+    if snap.character.grades < need_grades:
+        alert(s, f"Nível insuficiente! Requer nível {need_grades}.")
         return
     n = max(1, min(msg.count, item.count))
     uses = {BOX: _open_box, USE: _use_resource, GEM_BOX: _open_gem_box, BLOOD: _use_blood, EFFECT: _use_effect}

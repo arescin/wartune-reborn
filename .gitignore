@@ -57,3 +57,8 @@ data_pt_assets/
 
 # Temporários de automação e testes
 .playwright-mcp/
+
+# Capturas de tela e pacotes de assets usados só em diagnóstico manual
+ruffle_screen*.png
+dialog_crop.png
+*.tar.gz

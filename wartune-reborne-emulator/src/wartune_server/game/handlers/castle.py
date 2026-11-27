@@ -178,6 +178,9 @@ async def _build(s: GameSession, code: int, building: Building | None, target: R
     if fresh:
         s.send(S_ARMY_PAWN, castle_pawns(snap, templates))
     s.send(S_ORDER_USE, cs.order_info(order, now))
+    if covenant:
+        s.send(S_ORDER_QUICK, pb.OrderQuickRspMsg(orderInfo=[cs.order_info(order, now)]))
+        s.send(S_ORDER_LIST, b.complete(cs.order_list(snap, now)))
     s.send(S_BUILDINGS, _buildings(s, [building, *unlocked]))
     # texto do oficial inglês (83, tutorial_en #594: "Town Hall has been upgraded to Lvl. 2")
     text = f"{target['BuildingName']} has been upgraded to Lvl. {target['BuildingGrade']}"
