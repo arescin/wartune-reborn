@@ -27,6 +27,7 @@ import zlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -71,15 +72,27 @@ class Achado:
 
 
 
-def baixar(url: str, tempo: int = 60) -> tuple[int, bytes]:
+def baixar(url: str, tempo: int = 60, tentativas: int = 4) -> tuple[int, bytes]:
+    """Busca a URL insistindo quando a falha é de transporte.
+
+    Com dezenas de conexões simultâneas o proxy da CDN derruba algumas no meio do
+    caminho. Sem repetir, essas quedas apareciam no relatório como arquivo ausente e
+    a cada execução acusavam um conjunto diferente de nomes.
+    """
     pedido = Request(url, headers={"User-Agent": "wartune-auditoria/1.0"})
-    try:
-        with urlopen(pedido, timeout=tempo) as resposta:
-            return resposta.status, resposta.read()
-    except HTTPError as erro:
-        return erro.code, b""
-    except (URLError, TimeoutError, OSError):
-        return 0, b""
+    status = 0
+    for tentativa in range(tentativas):
+        try:
+            with urlopen(pedido, timeout=tempo) as resposta:
+                return resposta.status, resposta.read()
+        except HTTPError as erro:
+            if erro.code < 500:
+                return erro.code, b""
+            status = erro.code
+        except (URLError, TimeoutError, OSError):
+            status = 0
+        sleep(0.5 * (tentativa + 1))
+    return status, b""
 
 
 def descomprimir(bruto: bytes) -> bytes:
