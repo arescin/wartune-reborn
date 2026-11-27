@@ -2,6 +2,21 @@
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
+## [1.2.0] - 2026-11-27
+
+### Adicionado
+- **Mineração Massiva de Avatares, Modas e Montarias do Legend Legacy:**
+  - Extraídos e mapeados 4.124 alvos de avatares, modas, asas e montarias a partir de `ItemTempInfo.json`, `MountTempInfo.json` e corpos base dos jobs (`hunter`, `warrior`, `wizard` a pé e montados).
+  - Baixados 10.628 arquivos de avatares (`.bswf.json` e `.bswf_0.webp`) cobrindo 2.944 modelos visuais.
+  - Gerados 4.820 arquivos de fallback `.bswf` nos diretórios de modelos novos garantindo compatibilidade 100% com o cliente Flash original (sem erros 404).
+- **Extração Massiva de Mapas, Cenários e Ladrilhos:**
+  - Baixados metadados de 408 mapas (`assets/mapas/{mapId}/mapa.json`), contendo o grid completo de colisão/pathfinding (`andavel`) e dimensões reais.
+  - Baixados mais de 15.000 arquivos de mapas, metadados (`.maps`, `.titles`), miniaturas (`small.jpg`) e ladrilhos de alta resolução (`mapmaterial/land/{mapId}/tile_{x}_{y}.jpg`).
+- **CDN e Produção na VPS:**
+  - Atualizadas as configurações do Nginx com suporte a MIME types `image/webp` e `application/json`.
+  - Configuração do EasyPanel (`/etc/easypanel/projects/bots/wartune-cdn/files/1.txt`) sincronizada e recarregada sem indisponibilidade.
+  - Todos os assets verificados via HTTPS em produção (`https://wartune-cdn.thnsdu.easypanel.host/`), respondendo com código 200 OK e cabeçalhos CORS completos.
+
 ## [1.1.0] - 2026-11-27
 
 ### Adicionado
