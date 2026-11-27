@@ -84,12 +84,17 @@ def army(s: GameSession, snap: PlayerSnapshot) -> tuple[pb.ArmyArmyMsg, int]:
     hero.fashionArm = rules.avatar(snap, t, rules.FASHION_ARM)
     hero.fashionCloth = rules.avatar(snap, t, rules.FASHION_CLOTH)
     arm = rules.arm_avatar(snap, templates)
+    cloth = rules.cloth_avatar(snap, templates)
     pawn = army_pawn_msg(snap, templates, snap.character.id)
     mount: int | None = rules.systems(snap).mount_template or None
     rest = ev.peek(snap, "mount:rest")  # systems.MOUNT_REST_KEY; 0 explícito: o cliente só lê com hasMountTempId
     if mount and rest is not None and rest.value:
         mount = 0
-    msg = b.army_msg(snap, castle, hero, stats.fighting_capacity, arm, pawn, mount)
+    mount_grade = rules.mount_stars(rules.systems(snap)).get(mount, (0, 0))[0] if mount else 0
+    msg = b.army_msg(
+        snap, castle, hero, stats.fighting_capacity, arm, pawn, mount,
+        cloth=cloth, mount_grade=mount_grade,
+    )
     if pet := next((p for p in snap.pets if p.is_fight), None):  # o pet em batalha (só turco: login.json #5)
         msg.petTempId, msg.petQuqlity, msg.petName = pet.template_id, pet.quality, pet.name
     return msg, stats.fighting_capacity
