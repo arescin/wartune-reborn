@@ -12,6 +12,7 @@ from datetime import datetime
 from ..domain.models import Consortia, PlayerSnapshot
 from ..protocol.messages import wartune_pb2 as pb
 from ..templates.repository import GameTemplates
+from . import events as ev
 from . import rules
 from .builders import login as b
 from .session import GameSession
@@ -22,6 +23,22 @@ S_CREATE, S_RETURN, S_PRESENT, S_MOVE, S_REMOVE, S_LOOK = 4595, 4606, 4597, 4594
 # da masmorra criam a cidade do céu (4595); antes, só a saída da pedreira (5025, tutorial_en #2123)
 TUTORIAL_END = 30000
 POST_TUTORIAL = 19000  # noviceProcess da cena do castelo; antes disso o 4595 atrapalharia o tutorial
+
+
+def _is_vip(snap: PlayerSnapshot, now: datetime) -> bool:
+    st = ev.peek(snap, "vip")
+    if not st or not st.text:
+        return False
+    try:
+        end = b.parse_time(st.text)
+        return end is not None and end > now
+    except Exception:
+        return False
+
+
+def _vip_type(snap: PlayerSnapshot) -> int:
+    kind = ev.peek(snap, "vip:type")
+    return kind.value if kind else 0
 
 
 def room_player(
@@ -37,12 +54,32 @@ def room_player(
     """Como o cliente desenha um jogador numa cena (``SpaceManager.readMember``)."""
     c, leader = snap.character, snap.leader
     assert leader is not None
+
+    mount_id = rules.systems(snap).mount_template or 0
+    rest = ev.peek(snap, "mount:rest")
+    if rest is not None and rest.value:
+        mount_id = 0
+
+    sy = rules.systems(snap)
+    stars = rules.mount_stars(sy).get(mount_id, (0, 0)) if mount_id else (0, 0)
+
+    wing = rules.avatar(snap, templates, rules.WING)
+    hat = rules.avatar(snap, templates, rules.HAT)
+    fashion_arm = rules.avatar(snap, templates, rules.FASHION_ARM)
+    fashion_cloth = rules.avatar(snap, templates, rules.FASHION_CLOTH)
+    hide = leader is not None and leader.hide_fashion
+    appell_id = c.appell_id or 0
+    sex = c.sex
+
+    pet = next((p for p in snap.pets if p.is_fight), None)
+
     return b.complete(
         pb.RoomPlayerMsg(
             heroId=leader.id,
             playerId=c.id,
             grades=c.grades,
             nickName=c.nickname or "",
+            sex=sex,
             templateId=leader.template_id,
             arm=rules.arm_avatar(snap, templates),
             cloth=cloth,
@@ -54,6 +91,19 @@ def room_player(
             onlineState=True,
             consortiaId=guild.id if guild else 0,
             consortiaName=guild.name if guild else "",
+            isVip=_is_vip(snap, now),
+            vipType=_vip_type(snap),
+            mountTempId=mount_id,
+            mountGrade=stars[0],
+            wing=wing,
+            hat=hat,
+            fashionArm=fashion_arm,
+            fashionCloth=fashion_cloth,
+            hide=hide,
+            appellid=appell_id,
+            petTemplateId=pet.template_id if pet else 0,
+            petQuqlity=pet.quality if pet else 0,
+            petName=pet.name if pet else "",
         )
     )
 
@@ -150,13 +200,18 @@ def refresh_look(s: GameSession) -> None:
 def _look(s: GameSession) -> pb.HeroEquUpdatedMsg:
     assert s.snapshot is not None
     snap, templates = s.snapshot, s.ctx.templates
+    leader = snap.leader
     return b.complete(
         pb.HeroEquUpdatedMsg(
             playerId=s.player_id,
             armStr=rules.arm_avatar(snap, templates),
             clothStr=rules.cloth_avatar(snap, templates),
-            hide=False,
-            appellId=0,
+            wing=rules.avatar(snap, templates, rules.WING),
+            hat=rules.avatar(snap, templates, rules.HAT),
+            fashionArm=rules.avatar(snap, templates, rules.FASHION_ARM),
+            fashionCloth=rules.avatar(snap, templates, rules.FASHION_CLOTH),
+            hide=leader is not None and leader.hide_fashion,
+            appellId=snap.character.appell_id or 0,
         )
     )
 

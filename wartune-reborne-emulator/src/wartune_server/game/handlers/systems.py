@@ -360,6 +360,12 @@ async def mount_edit(s: GameSession, msg: pb.MountEditMsg) -> None:
         await s.ctx.characters.save(sy)
         send_mount(s)
         _army(s)
+        if s.space_pos is not None:
+            from .. import space
+            me = space.member(s)
+            s.send(space.S_PRESENT, pb.RoomEnterMsg(result=1, player=[me]))
+            for o in space.others(s):
+                o.send(space.S_PRESENT, pb.RoomEnterMsg(result=1, player=[me]))
         return
     if msg.op == MOUNT_RIDE:
         if not sy.mount_template:
@@ -369,6 +375,12 @@ async def mount_edit(s: GameSession, msg: pb.MountEditMsg) -> None:
         rest.value, rest.updated_at = int(msg.param1 == 0), s.ctx.clock.now()
         await s.ctx.characters.save(rest)
         _army(s)
+        if s.space_pos is not None:
+            from .. import space
+            me = space.member(s)
+            s.send(space.S_PRESENT, pb.RoomEnterMsg(result=1, player=[me]))
+            for o in space.others(s):
+                o.send(space.S_PRESENT, pb.RoomEnterMsg(result=1, player=[me]))
         return
     if msg.op != MOUNT_TRAIN:
         # rei das montarias (7): o cliente inglês não tem MountType 4, tabela 109 nem o item 2131500, e a lista do
