@@ -5,6 +5,11 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 ## [1.2.0] - 2026-11-27
 
 ### Adicionado
+- **Replicação Integral do Acervo Legend Legacy na CDN:**
+  - Descoberta e extração dos **275 módulos JavaScript ESM nativos** (`v/8073dde6b590/js/...`), mapeando toda a arquitetura de combate, interface, rede e dados.
+  - Baixados todos os módulos de interface (`assets/dados/estilos/*.json` e `assets/conv/ui/zh_cn/swf/*.swf.json`), juntamente com suas páginas de texturas de alta definição (`.png` e `.webp`).
+  - Espelhados os nós e prédios de mapa (`assets/conv/mapmaterial/build/`), cenários de combate (`assets/conv/sceneIma/`), monstros/tropas (`assets/conv/swf/`) e trilhas sonoras em MP3 (`assets/conv/sounds/`).
+  - Roteamento e compatibilidade Nginx validados em produção com HTTP/2 200 OK.
 - **Mineração Massiva de Avatares, Modas e Montarias do Legend Legacy:**
   - Extraídos e mapeados 4.124 alvos de avatares, modas, asas e montarias a partir de `ItemTempInfo.json`, `MountTempInfo.json` e corpos base dos jobs (`hunter`, `warrior`, `wizard` a pé e montados).
   - Baixados 10.628 arquivos de avatares (`.bswf.json` e `.bswf_0.webp`) cobrindo 2.944 modelos visuais.
